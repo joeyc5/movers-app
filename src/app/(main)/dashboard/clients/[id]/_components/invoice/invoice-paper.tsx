@@ -63,7 +63,7 @@ export function InvoicePaper({ invoice }: { invoice: InvoiceFormValues }) {
             {invoice.to.addressLines.map((line) => (
               <p key={line}>{line}</p>
             ))}
-            <p>Tax ID: {invoice.to.taxId}</p>
+            {invoice.to.taxId ? <p>Tax ID: {invoice.to.taxId}</p> : null}
           </div>
         </section>
       </header>

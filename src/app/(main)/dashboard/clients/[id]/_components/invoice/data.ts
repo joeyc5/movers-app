@@ -1,5 +1,7 @@
 import { addDays, format } from "date-fns";
 
+import type { Client } from "../../../_components/data";
+
 export interface InvoiceLineItem {
   id: string;
   description: string;
@@ -36,7 +38,7 @@ export interface InvoiceToDetails {
   name: string;
   email: string;
   addressLines: string[];
-  taxId: string;
+  taxId?: string;
 }
 
 export interface InvoiceFormValues {
@@ -53,91 +55,53 @@ export interface InvoiceFormValues {
 
 const today = new Date();
 
-export const defaultInvoiceValues: InvoiceFormValues = {
-  referenceNumber: "FL-0425",
-  issuedDate: format(today, "yyyy-MM-dd"),
-  paymentDueDate: format(addDays(today, 14), "yyyy-MM-dd"),
-  from: {
-    name: "Weblabs Studio",
-    email: "hello@weblabs.studio",
-    phone: "+1-512-555-0184",
-    website: "weblabs.studio",
-    addressLines: ["214 Pixel Avenue", "Austin, TX 78701"],
-    taxId: "WS-1029384756",
-    paymentAccountName: "Mercury Business",
-    routingNumber: "084009519",
-    issuerName: "Arham Khan",
-  },
-  to: {
-    id: "aiy-cap",
-    name: "AIY Cap",
-    email: "finance@aiycap.com",
-    addressLines: ["One BKC, Bandra Kurla Complex", "Mumbai, Maharashtra 400051"],
-    taxId: "GSTIN-27AAICA9102K1Z7",
-  },
-  taxId: "vat",
-  discountType: "fixed",
-  discountValue: 40,
-  items: [
-    {
-      id: "hosting",
-      description: "Cloud hosting services",
-      quantity: 1,
-      unitPrice: 3500,
-    },
-    {
-      id: "analytics",
-      description: "Data analytics report",
-      quantity: 2,
-      unitPrice: 750,
-    },
-    {
-      id: "support",
-      description: "Technical support retainer",
-      quantity: 1,
-      unitPrice: 400,
-    },
-  ],
+const movingCompanyFromDetails: InvoiceFromDetails = {
+  name: "Movers CRM",
+  email: "billing@example.com",
+  phone: "(510) 555-0100",
+  website: "",
+  addressLines: ["1250 Marina Village Pkwy", "Alameda, CA 94501"],
+  taxId: "EIN 68-0453921",
+  paymentAccountName: "Business Operating Account",
+  routingNumber: "071925363",
+  issuerName: "Morgan Ellis",
 };
+
+export function clientToInvoiceDetails(client: Client): InvoiceToDetails {
+  const { billingAddress } = client;
+
+  return {
+    id: client.id,
+    name: client.name,
+    email: client.email,
+    addressLines: [billingAddress.street, `${billingAddress.city}, ${billingAddress.state} ${billingAddress.zip}`],
+  };
+}
+
+export function getDefaultInvoiceValues(client: Client): InvoiceFormValues {
+  return {
+    referenceNumber: `INV-${format(today, "yyyyMMdd")}`,
+    issuedDate: format(today, "yyyy-MM-dd"),
+    paymentDueDate: format(addDays(today, 14), "yyyy-MM-dd"),
+    from: movingCompanyFromDetails,
+    to: clientToInvoiceDetails(client),
+    taxId: invoiceTaxOptions[0].id,
+    discountType: "fixed",
+    discountValue: 0,
+    items: [],
+  };
+}
 
 export const invoiceTaxOptions: InvoiceTaxOption[] = [
   {
-    id: "gst",
-    name: "GST",
-    rate: 18,
-  },
-  {
-    id: "vat",
-    name: "VAT",
-    rate: 12,
-  },
-  {
-    id: "service-tax",
-    name: "Service Tax",
-    rate: 10,
+    id: "ca-sales-tax",
+    name: "CA Sales Tax",
+    rate: 8.75,
   },
   {
     id: "none",
     name: "No Tax",
     rate: 0,
-  },
-];
-
-export const invoiceClients: InvoiceToDetails[] = [
-  {
-    id: "bright-enterprises",
-    name: "Bright Enterprises",
-    email: "billing@brightenterprises.com",
-    addressLines: ["450 Park Avenue South", "New York, NY 10016", "United States"],
-    taxId: "US-EIN-84-2938475",
-  },
-  defaultInvoiceValues.to,
-  {
-    id: "northline-gmbh",
-    name: "Northline GmbH",
-    email: "ap@northline.de",
-    addressLines: ["Kastanienallee 32", "10435 Berlin", "Germany"],
-    taxId: "DE-VAT-219384756",
   },
 ];
 
