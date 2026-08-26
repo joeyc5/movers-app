@@ -54,8 +54,11 @@ export function FileManagerToolbar() {
                     <DropdownMenuRadioGroup value="all">
                       <DropdownMenuRadioItem value="all">All types</DropdownMenuRadioItem>
                       <DropdownMenuRadioItem value="archive">Archive</DropdownMenuRadioItem>
-                      <DropdownMenuRadioItem value="design">Design</DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="bill-of-lading">Bill of Lading</DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="contract">Contract</DropdownMenuRadioItem>
                       <DropdownMenuRadioItem value="document">Document</DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="insurance-certificate">Insurance Certificate</DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="inventory">Inventory</DropdownMenuRadioItem>
                       <DropdownMenuRadioItem value="pdf">PDF</DropdownMenuRadioItem>
                       <DropdownMenuRadioItem value="spreadsheet">Spreadsheet</DropdownMenuRadioItem>
                     </DropdownMenuRadioGroup>
