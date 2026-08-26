@@ -2,6 +2,7 @@
 
 import * as React from "react";
 
+import type { EventInput } from "@fullcalendar/react";
 import { useCalendarController } from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/react/daygrid";
 import interactionPlugin from "@fullcalendar/react/interaction";
@@ -9,14 +10,12 @@ import listPlugin from "@fullcalendar/react/list";
 import multiMonthPlugin from "@fullcalendar/react/multimonth";
 import timeGridPlugin from "@fullcalendar/react/timegrid";
 import { differenceInCalendarDays, endOfMonth, format, startOfMonth } from "date-fns";
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Plus, XIcon } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, XIcon } from "lucide-react";
 
 import { EventCalendarViews } from "@/components/calendar/event-calendar-views";
 import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-
-import { demoEvents } from "./events-data";
 
 const views = [
   { key: "dayGridMonth", label: "Month" },
@@ -24,20 +23,11 @@ const views = [
   { key: "timeGridDay", label: "Day" },
 ];
 
-const calendars = [
-  { key: "all", label: "All calendars" },
-  { key: "work", label: "Work" },
-  { key: "personal", label: "Personal" },
-  { key: "team", label: "Team" },
-  { key: "focus", label: "Focus time" },
-];
-
 const plugins = [dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin, multiMonthPlugin];
 
-export function Calendar() {
+export function EventCalendar({ events, addLabel }: { events: EventInput[]; addLabel: string }) {
   const controller = useCalendarController();
   const [eventCount, setEventCount] = React.useState(0);
-  const [selectedCalendar, setSelectedCalendar] = React.useState(calendars[0].key);
   const [dateInfo, setDateInfo] = React.useState(() => {
     const now = new Date();
 
@@ -60,21 +50,6 @@ export function Calendar() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <Select value={selectedCalendar} onValueChange={setSelectedCalendar}>
-            <SelectTrigger className="w-full sm:w-44">
-              <CalendarIcon />
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent position="popper">
-              <SelectGroup>
-                {calendars.map((calendar) => (
-                  <SelectItem key={calendar.key} value={calendar.key}>
-                    {calendar.label}
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            </SelectContent>
-          </Select>
           <ButtonGroup>
             <Button size="icon" variant="outline" onClick={() => controller.prev()}>
               <ChevronLeft />
@@ -107,7 +82,7 @@ export function Calendar() {
           </Select>
           <Button>
             <Plus />
-            Add event
+            {addLabel}
           </Button>
         </div>
       </div>
@@ -117,7 +92,7 @@ export function Calendar() {
         initialView={views[0].key}
         plugins={[...plugins]}
         popoverCloseContent={() => <XIcon className="size-5 text-muted-foreground group-hover:text-foreground" />}
-        events={demoEvents}
+        events={events}
         nowIndicator
         datesSet={(info) => {
           setDateInfo({
@@ -125,8 +100,9 @@ export function Calendar() {
             days: differenceInCalendarDays(info.view.currentEnd, info.view.currentStart),
           });
           setEventCount(
-            demoEvents.filter((event) => {
-              const start = new Date(event.start);
+            events.filter((event) => {
+              if (!event.start) return false;
+              const start = new Date(event.start as Date);
 
               return start >= info.start && start < info.end;
             }).length,
