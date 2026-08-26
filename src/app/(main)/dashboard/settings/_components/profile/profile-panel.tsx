@@ -1,50 +1,20 @@
 import { LockKeyhole } from "lucide-react";
 
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-import { profile } from "./_components/profile-data";
-import { ProfileDocuments } from "./_components/profile-documents";
-import { EmploymentDetails } from "./_components/profile-employment-details";
-import { ProfileHeader } from "./_components/profile-header";
-import { ProfileOverview } from "./_components/profile-overview";
-import { PersonalDetails } from "./_components/profile-personal-details";
-import { ProfileStatusSidebar } from "./_components/profile-status-sidebar";
-import { TimeOffDetails } from "./_components/profile-time-off-details";
+import { profile } from "./profile-data";
+import { ProfileDocuments } from "./profile-documents";
+import { EmploymentDetails } from "./profile-employment-details";
+import { ProfileHeader } from "./profile-header";
+import { ProfileOverview } from "./profile-overview";
+import { PersonalDetails } from "./profile-personal-details";
+import { ProfileStatusSidebar } from "./profile-status-sidebar";
+import { TimeOffDetails } from "./profile-time-off-details";
 
-export default function Page() {
+export function ProfilePanel() {
   return (
-    <div className="flex flex-col gap-4 py-4" data-content-padding="false">
-      <Breadcrumb className="px-4">
-        <BreadcrumbList>
-          <BreadcrumbItem>
-            <span>Dashboard</span>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <span>People</span>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <span>Employee directory</span>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <span>{profile.name}</span>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage>Profile details</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
+    <div className="flex flex-col gap-4">
       <ProfileHeader profile={profile} />
 
       <Tabs className="min-h-0 flex-1 gap-0" defaultValue="overview">
@@ -62,7 +32,7 @@ export default function Page() {
           </TabsList>
         </div>
 
-        <div className="px-4 md:px-6">
+        <div className="md:px-2">
           <TabsContent value="overview">
             <div className="grid lg:grid-cols-[minmax(0,1fr)_auto_18rem]">
               <div className="py-4 lg:pr-6">

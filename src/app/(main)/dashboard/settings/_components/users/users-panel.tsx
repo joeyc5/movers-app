@@ -22,7 +22,7 @@ import { filters, type UserRow } from "./data";
 import { usersColumns } from "./users-columns";
 import { UsersTable } from "./users-table";
 
-export function Users({ users }: { users: UserRow[] }) {
+export function UsersPanel({ users }: { users: UserRow[] }) {
   const [rowSelection, setRowSelection] = React.useState({});
   const [sorting, setSorting] = React.useState<SortingState>([{ id: "joinedDate", desc: true }]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
@@ -60,8 +60,7 @@ export function Users({ users }: { users: UserRow[] }) {
   const roleFilter = (table.getColumn("role")?.getFilterValue() as string | undefined) ?? filters.role[0];
   const teamFilter = (table.getColumn("team")?.getFilterValue() as string | undefined) ?? filters.team[0];
   const statusFilter = (table.getColumn("status")?.getFilterValue() as string | undefined) ?? filters.status[0];
-  const workspaceFilter =
-    (table.getColumn("workspace")?.getFilterValue() as string | undefined) ?? filters.workspace[0];
+  const locationFilter = (table.getColumn("location")?.getFilterValue() as string | undefined) ?? filters.location[0];
   const selectedCount = table.getFilteredSelectedRowModel().rows.length;
 
   function setColumnSelectFilter(columnId: string, value: string) {
@@ -73,9 +72,7 @@ export function Users({ users }: { users: UserRow[] }) {
     <Card>
       <CardHeader className="border-b has-data-[slot=card-action]:grid-cols-1 md:has-data-[slot=card-action]:grid-cols-[1fr_auto]">
         <CardTitle className="text-xl leading-none">Users</CardTitle>
-        <CardDescription className="max-w-sm leading-snug">
-          Manage your organization members and their access.
-        </CardDescription>
+        <CardDescription className="max-w-sm leading-snug">Manage staff accounts and their access.</CardDescription>
         <CardAction className="col-start-1 row-start-auto flex w-full flex-wrap justify-start gap-2 justify-self-stretch md:col-start-2 md:row-span-2 md:row-start-1 md:w-auto md:flex-nowrap md:justify-end md:justify-self-end">
           <InputGroup className="h-7 w-full md:w-64">
             <InputGroupAddon align="inline-start">
@@ -160,14 +157,14 @@ export function Users({ users }: { users: UserRow[] }) {
             </Select>
           </div>
 
-          <Select value={workspaceFilter} onValueChange={(value) => setColumnSelectFilter("workspace", value)}>
+          <Select value={locationFilter} onValueChange={(value) => setColumnSelectFilter("location", value)}>
             <SelectTrigger size="sm">
-              <span className="text-muted-foreground">Workspace:</span>
+              <span className="text-muted-foreground">Location:</span>
               <SelectValue />
             </SelectTrigger>
             <SelectContent position="popper" align="end">
               <SelectGroup>
-                {filters.workspace.map((option) => (
+                {filters.location.map((option) => (
                   <SelectItem key={option} value={option}>
                     {option}
                   </SelectItem>

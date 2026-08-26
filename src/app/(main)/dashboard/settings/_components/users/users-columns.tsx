@@ -97,15 +97,15 @@ function AvatarCell({ lastActive, name }: { lastActive: number; name: string }) 
   );
 }
 
-function WorkspaceCell({ workspaces }: { workspaces: string[] }) {
-  const [firstWorkspace, ...remainingWorkspaces] = workspaces;
-  const remainingCount = remainingWorkspaces.length;
+function LocationCell({ locations }: { locations: string[] }) {
+  const [firstLocation, ...remainingLocations] = locations;
+  const remainingCount = remainingLocations.length;
 
   return (
     <AvatarGroup className="*:data-[slot=avatar]:ring-0">
-      {firstWorkspace ? (
+      {firstLocation ? (
         <Avatar className="after:rounded-sm">
-          <AvatarFallback className="rounded-sm ring-0">{getInitials(firstWorkspace)}</AvatarFallback>
+          <AvatarFallback className="rounded-sm ring-0">{getInitials(firstLocation)}</AvatarFallback>
         </Avatar>
       ) : null}
       {remainingCount > 0 ? (
@@ -185,10 +185,10 @@ export const usersColumns: ColumnDef<DataTableFeatures, UserRow>[] = [
     cell: ({ row }) => <div className="text-sm">{row.original.team}</div>,
   },
   {
-    accessorKey: "workspace",
-    header: "Workspace",
+    accessorKey: "location",
+    header: "Location",
     filterFn: "arrIncludes",
-    cell: ({ row }) => <WorkspaceCell workspaces={row.original.workspace} />,
+    cell: ({ row }) => <LocationCell locations={row.original.location} />,
   },
   {
     accessorKey: "status",
