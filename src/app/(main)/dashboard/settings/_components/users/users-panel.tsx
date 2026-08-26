@@ -70,10 +70,10 @@ export function UsersPanel({ users }: { users: UserRow[] }) {
 
   return (
     <Card>
-      <CardHeader className="border-b has-data-[slot=card-action]:grid-cols-1 md:has-data-[slot=card-action]:grid-cols-[1fr_auto]">
+      <CardHeader className="border-b has-data-[slot=card-action]:grid-cols-1 xl:has-data-[slot=card-action]:grid-cols-[1fr_auto]">
         <CardTitle className="text-xl leading-none">Users</CardTitle>
         <CardDescription className="max-w-sm leading-snug">Manage staff accounts and their access.</CardDescription>
-        <CardAction className="col-start-1 row-start-auto flex w-full flex-wrap justify-start gap-2 justify-self-stretch md:col-start-2 md:row-span-2 md:row-start-1 md:w-auto md:flex-nowrap md:justify-end md:justify-self-end">
+        <CardAction className="col-start-1 row-start-auto flex w-full flex-wrap justify-start gap-2 justify-self-stretch xl:col-start-2 xl:row-span-2 xl:row-start-1 xl:w-auto xl:justify-end xl:justify-self-end">
           <InputGroup className="h-7 w-full md:w-64">
             <InputGroupAddon align="inline-start">
               <Search className="size-3.5" />
