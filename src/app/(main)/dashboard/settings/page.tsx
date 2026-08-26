@@ -1,6 +1,8 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import { ProfilePanel } from "./_components/profile/profile-panel";
+import { RolesPanel } from "./_components/roles/roles-panel";
+import { roles } from "./_components/roles/roles-table/data";
 import { users } from "./_components/users/data";
 import { UsersPanel } from "./_components/users/users-panel";
 
@@ -16,6 +18,7 @@ export default function Page() {
         <TabsList variant="line">
           <TabsTrigger value="profile">Profile</TabsTrigger>
           <TabsTrigger value="users">Users</TabsTrigger>
+          <TabsTrigger value="roles">Roles & Permissions</TabsTrigger>
         </TabsList>
 
         <TabsContent className="pt-4" value="profile">
@@ -24,6 +27,10 @@ export default function Page() {
 
         <TabsContent className="pt-4" value="users">
           <UsersPanel users={users} />
+        </TabsContent>
+
+        <TabsContent className="pt-4" value="roles">
+          <RolesPanel roles={roles} />
         </TabsContent>
       </Tabs>
     </div>

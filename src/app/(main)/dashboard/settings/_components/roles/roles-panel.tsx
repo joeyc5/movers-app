@@ -2,7 +2,7 @@
 import { useState } from "react";
 
 import { type ColumnFiltersState, type PaginationState, useTable } from "@tanstack/react-table";
-import { AlertTriangle, ChevronRight, FileUp, Search } from "lucide-react";
+import { AlertTriangle, ChevronRight, Search } from "lucide-react";
 
 import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -39,7 +39,7 @@ function getRoleGroupFilterValue(typeFilter: string) {
   return undefined;
 }
 
-export function Roles({ roles }: { roles: Role[] }) {
+export function RolesPanel({ roles }: { roles: Role[] }) {
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
@@ -72,21 +72,6 @@ export function Roles({ roles }: { roles: Role[] }) {
 
   return (
     <div className="flex h-full flex-col gap-4">
-      <div className="flex flex-col items-start gap-4 sm:flex-row sm:justify-between">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-3xl tracking-tight">Roles & Permissions</h1>
-          <p className="text-muted-foreground text-sm">Manage access roles and permissions across your organization.</p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Button size="sm" variant="outline">
-            <FileUp data-icon="inline-start" />
-            Import JSON
-          </Button>
-          <Button size="sm">Create role</Button>
-        </div>
-      </div>
-
       <Tabs className="h-full gap-4" defaultValue="roles">
         <TabsList
           variant="line"
@@ -164,9 +149,8 @@ export function Roles({ roles }: { roles: Role[] }) {
                       <SelectGroup>
                         <SelectItem value="All">All</SelectItem>
                         <SelectItem value="System">System</SelectItem>
-                        <SelectItem value="Jane Doe">Jane Doe</SelectItem>
-                        <SelectItem value="Alex Kim">Alex Kim</SelectItem>
-                        <SelectItem value="Chris Lee">Chris Lee</SelectItem>
+                        <SelectItem value="Grace Chen">Grace Chen</SelectItem>
+                        <SelectItem value="Marcus Webb">Marcus Webb</SelectItem>
                       </SelectGroup>
                     </SelectContent>
                   </Select>
