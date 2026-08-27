@@ -88,6 +88,32 @@ Marchetti's five clients resolve to CLT-1007, CLT-1010, CLT-1014, CLT-1018 and
 CLT-1022, which is the corrected list rather than the wrong one the design JSON
 carried.
 
+## Three things that will look like a broken migration and are not
+
+Read this before diagnosing anything.
+
+1. **All 27 `staff.auth_user_id` are NULL, so every screen will return zero
+   rows.** Until someone signs in and `claim_staff_for_current_user()` stamps
+   the link, `app.is_active_staff()` is false for everybody, and every RLS
+   policy in the app is built on it. The symptom is indistinguishable from a
+   failed migration: queries succeed, return nothing, raise no error. It is
+   correct behaviour. Seeding auth users is step 1 of Next Steps for this exact
+   reason.
+2. **The 15 document rows point at storage paths with no bytes behind them.**
+   SQL cannot upload to Storage. `scripts/seed-documents.ts` places the
+   placeholder objects; until it runs, Download and any signed URL will 403.
+3. **Verify as Elena Torres, never Morgan Ellis or Grace Chen.** Admin and Owner
+   are `access_level = 'Full'`, and `has_any_perm` short-circuits on that before
+   it ever reads `role_permission_sets`. Every gate passes for them whether the
+   policies are right or wrong.
+
+## Scope of what is verified
+
+The schema, policies, grants and seed are verified against the live database,
+not merely built. Two things are explicitly NOT verified: **the policy set has
+never been exercised as a non-Full identity**, and **the app itself has never
+been run against the database**. Both wait on auth users existing.
+
 ## Security advisor state
 
 Run `get_advisors` after schema changes. As of handoff, everything it reports is
