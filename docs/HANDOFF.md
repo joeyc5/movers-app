@@ -56,16 +56,26 @@ Be direct about this with Joey; none of it is hidden.
 ## Exactly where the migration stopped
 
 As of handoff, `supabase_migrations.schema_migrations` showed applied through
-`0010_seed_part03`. Confirmed landed and verified: 27 staff with all 27 role
+`0010_seed_part04`.
+
+**The end-to-end test passes.** Booked revenue over Won deals reads exactly
+**21100.00**, against 15 deals and 2 quotes. Both Won deals are seeded at
+`estimated_value` 0.00, so that figure can only exist because the
+quote-acceptance write-back trigger fired. That single number confirms the
+crew-size labor math, the rate snapshotting, the rollup trigger firing on INSERT
+rather than UPDATE only, and the write-back, all working together on real rows.
+
+Also confirmed landed and verified: 27 staff with all 27 role
 links resolved (the citext canary passes), 31 staff_locations, 39
 role_permission_sets, 25 clients with status distribution Active 10 /
 In Storage 4 / Lead 4 / Past 4 / Inactive 3, zero unowned clients, and the five
 clients owned by the Deactivated rep resolving correctly to CLT-1007, CLT-1010,
 CLT-1014, CLT-1018 and CLT-1022.
 
-Still to apply when this was written: `0010_seed_part04`, `part05`, `part06`,
-then `9999_security_guard_part01` and `part02`. A background agent was mid-run
-on part04, so some or all may have landed since.
+Still to apply when this was written: `0010_seed_part05` and `part06` (vaults,
+storage agreements, calendar events, documents), then
+`9999_security_guard_part01` and `part02`. A background agent was mid-run, so
+some or all may have landed since.
 
 Check what is applied:
 
