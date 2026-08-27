@@ -65,12 +65,12 @@ export function VaultsPanel({ vaults }: { vaults: Vault[] }) {
 
   return (
     <Card>
-      <CardHeader className="border-b has-data-[slot=card-action]:grid-cols-1 xl:has-data-[slot=card-action]:grid-cols-[1fr_auto]">
+      <CardHeader className="border-b has-data-[slot=card-action]:grid-cols-1 @2xl/card-header:has-data-[slot=card-action]:grid-cols-1 @5xl/card-header:has-data-[slot=card-action]:grid-cols-[minmax(0,1fr)_minmax(0,auto)]">
         <CardTitle className="text-xl leading-none">Vaults</CardTitle>
         <CardDescription className="max-w-sm leading-snug">
           Every vault by warehouse and rack, with occupancy and inspection state.
         </CardDescription>
-        <CardAction className="col-start-1 row-start-auto flex w-full flex-wrap justify-start gap-2 justify-self-stretch xl:col-start-2 xl:row-span-2 xl:row-start-1 xl:w-auto xl:justify-end xl:justify-self-end">
+        <CardAction className="col-start-1 row-start-auto w-full justify-self-stretch pt-1 @2xl/card-header:col-start-1 @2xl/card-header:row-start-auto @2xl/card-header:justify-start @2xl/card-header:justify-self-stretch @5xl/card-header:col-start-2 @5xl/card-header:row-span-2 @5xl/card-header:row-start-1 @5xl/card-header:w-auto @5xl/card-header:justify-end @5xl/card-header:justify-self-end @5xl/card-header:pt-0">
           <InputGroup className="h-7 w-full md:w-64">
             <InputGroupAddon align="inline-start">
               <Search className="size-3.5" />

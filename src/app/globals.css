@@ -142,6 +142,27 @@ These serve as the fallback; there is no separate default.css file. */
 }
 
 @layer utilities {
+  /* Touch-target expansion. WCAG 2.5.8 wants a 24px minimum and Apple/Material want 44px;
+     several icon-only controls in this app measure 28x28, which is the primary mobile nav
+     trigger among others. This grows the HIT AREA with a pseudo-element instead of the box,
+     so the visual design is unchanged. Applied only on coarse pointers so it cannot overlap
+     neighbouring controls on a mouse-driven desktop layout. */
+  @media (pointer: coarse) {
+    .touch-target {
+      position: relative;
+    }
+
+    .touch-target::before {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: max(100%, 44px);
+      height: max(100%, 44px);
+      transform: translate(-50%, -50%);
+    }
+  }
+
   [data-theme-preset]:not([data-theme-preset="default"]) .shadow-2xs {
     box-shadow: var(--shadow-2xs);
   }

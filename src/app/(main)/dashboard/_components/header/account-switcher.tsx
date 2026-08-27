@@ -35,10 +35,16 @@ export function AccountSwitcher({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Avatar className="size-8 rounded-lg">
-          <AvatarImage src={activeUser.avatar || undefined} alt={activeUser.name} />
-          <AvatarFallback>{getInitials(activeUser.name)}</AvatarFallback>
-        </Avatar>
+        <button
+          type="button"
+          aria-label={`Switch account. Signed in as ${activeUser.name}`}
+          className="touch-target rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        >
+          <Avatar className="size-8 rounded-lg">
+            <AvatarImage src={activeUser.avatar || undefined} alt="" />
+            <AvatarFallback>{getInitials(activeUser.name)}</AvatarFallback>
+          </Avatar>
+        </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="min-w-56 space-y-1 rounded-lg" side="bottom" align="end" sideOffset={4}>
         {users.map((user) => (

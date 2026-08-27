@@ -1,5 +1,7 @@
 "use client";
 
+import type * as React from "react";
+
 import { format } from "date-fns";
 import {
   ArrowRight,
@@ -44,10 +46,19 @@ export function DealCard({
   deal,
   stage,
   isOverlay = false,
+  dragHandle,
 }: {
   deal: PipelineDeal;
   stage?: PipelineStage;
   isOverlay?: boolean;
+  /**
+   * The drag grip, supplied by SortableDealCard. Dragging is initiated from the grip only, so
+   * the card body keeps its default touch-action and the board stays swipeable on a phone —
+   * with touch-action:none on the whole card, 4 of the 5 columns were unreachable by touch.
+   * A ReactNode rather than a ref callback: this is a "use client" entry file, and a function
+   * prop on one trips Next's serializable-props rule.
+   */
+  dragHandle?: React.ReactNode;
 }) {
   const isWon = stage === "Won";
   const isLost = stage === "Lost";
@@ -63,18 +74,21 @@ export function DealCard({
       )}
     >
       <div className="min-w-0 space-y-1.5">
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center justify-between gap-2">
           <h3 className="min-w-0 truncate font-medium text-sm leading-none">{deal.clientName}</h3>
-          <Badge
-            variant={priorityBadgeConfig[deal.priority].variant}
-            className={cn(
-              "shrink-0 rounded-md border-transparent px-2 font-medium",
-              priorityBadgeConfig[deal.priority].className,
-            )}
-          >
-            <PriorityIcon data-icon="inline-start" />
-            {deal.priority}
-          </Badge>
+          <div className="flex shrink-0 items-center gap-1">
+            <Badge
+              variant={priorityBadgeConfig[deal.priority].variant}
+              className={cn(
+                "rounded-md border-transparent px-2 font-medium",
+                priorityBadgeConfig[deal.priority].className,
+              )}
+            >
+              <PriorityIcon data-icon="inline-start" />
+              {deal.priority}
+            </Badge>
+            {dragHandle}
+          </div>
         </div>
         <div className="font-medium text-lg tabular-nums leading-none">{formatCurrency(deal.estimatedValue)}</div>
         {deal.originCity ? (
