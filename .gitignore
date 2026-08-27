@@ -44,3 +44,6 @@ supabase/.temp/
 
 # derived: migrations mechanically split for chunked application
 supabase/migrations/parts/
+
+# stray CLI state written when the shell cwd was inside migrations/
+supabase/**/.temp/
