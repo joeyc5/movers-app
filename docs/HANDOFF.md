@@ -53,58 +53,71 @@ Be direct about this with Joey; none of it is hidden.
 6. All three scripts are **built, not verified**. No DB connection or admin API
    call has been exercised from them.
 
-## Exactly where the migration stopped
+## The migration is COMPLETE
 
-As of handoff, `supabase_migrations.schema_migrations` showed applied through
-`0010_seed_part04`.
+All migrations applied and verified, including both parts of the security
+guard. The guard raises on any deviation, so a clean apply means all of its
+checks passed.
 
 **The end-to-end test passes.** Booked revenue over Won deals reads exactly
-**21100.00**, against 15 deals and 2 quotes. Both Won deals are seeded at
-`estimated_value` 0.00, so that figure can only exist because the
-quote-acceptance write-back trigger fired. That single number confirms the
-crew-size labor math, the rate snapshotting, the rollup trigger firing on INSERT
-rather than UPDATE only, and the write-back, all working together on real rows.
+**21100.00**. Both Won deals are seeded at `estimated_value` 0.00, so that
+figure can only exist because the quote-acceptance write-back trigger fired.
+That single number confirms the crew-size labor math, the rate snapshotting,
+the rollup trigger firing on INSERT rather than UPDATE only, and the write-back,
+all working together on real rows.
 
-Also confirmed landed and verified: 27 staff with all 27 role
-links resolved (the citext canary passes), 31 staff_locations, 39
-role_permission_sets, 25 clients with status distribution Active 10 /
-In Storage 4 / Lead 4 / Past 4 / Inactive 3, zero unowned clients, and the five
-clients owned by the Deactivated rep resolving correctly to CLT-1007, CLT-1010,
-CLT-1014, CLT-1018 and CLT-1022.
+Every seed number measured and matching:
 
-Still to apply when this was written: `0010_seed_part05` and `part06` (vaults,
-storage agreements, calendar events, documents), then
-`9999_security_guard_part01` and `part02`. A background agent was mid-run, so
-some or all may have landed since.
+| | measured |
+|---|---|
+| staff / clients / deals | 27 / 25 / 15 |
+| vaults / agreements / events | 14 / 6 / 21 |
+| documents / folders | 15 / 6 |
+| roles / permission sets | 9 / 16 |
+| vault capacity / occupied / ratio | 7900 / 4110 / 52% |
+| V-206 occupancy (deliberate over-capacity) | 110 |
+| clients by status | Active 10, In Storage 4, Lead 4, Past 4, Inactive 3 |
+| tables without RLS | 0 |
+| private `documents` bucket | yes |
+| `storage.objects` policies | 3, and no DELETE policy |
 
-Check what is applied:
+The citext canary passes: 27 staff with all 27 role links resolved, 31
+staff_locations, 39 role_permission_sets. Per-role counts sum to 27 over all
+staff and to 25 over the original UserRow emails, both correct. Sofia
+Marchetti's five clients resolve to CLT-1007, CLT-1010, CLT-1014, CLT-1018 and
+CLT-1022, which is the corrected list rather than the wrong one the design JSON
+carried.
 
-    select name from supabase_migrations.schema_migrations order by name;
+## Security advisor state
 
-Then apply whatever is missing, in filename order, from
-`supabase/migrations/parts/`, using `mcp__claude_ai_Supabase__apply_migration`.
-Each part is its own transaction, so re-applying one that already succeeded will
-fail on a duplicate key rather than corrupt anything. `0010_seed` is
-single-pass past its quote step: it raises 23505 on `quotes_code_key` if run
-twice, before any line item exists.
+Run `get_advisors` after schema changes. As of handoff, everything it reports is
+understood:
+
+- **`app.code_counters` RLS enabled with no policy (INFO).** Intentional. It has
+  no grants either, so both layers deny independently.
+- **Seven SECURITY DEFINER functions callable by `authenticated` (WARN).** These
+  are the caller-facing RPCs and they have to live in `public` to be reachable
+  through PostgREST at all. Each gates internally. This warning is the expected
+  cost of that design, not a defect.
+- `app.calc_labor_total` had a mutable search_path; pinned in
+  `0011_pin_calc_labor_total_search_path.sql` and re-verified.
+- Two functions in a leftover `_try_sec` scratch schema. That schema is dropped;
+  no scratch schemas remain.
 
 ## Next steps, in order
 
-1. Confirm the seed finished. Run the verification numbers in "How to check the
-   seed" below. If `clients` is 0, re-apply `0010_seed` from
-   `supabase/migrations/parts/` in part order.
-2. Export `SUPABASE_SECRET_KEY` and `SUPABASE_DB_URL`, then `npm run seed:auth`.
+1. Export `SUPABASE_SECRET_KEY` and `SUPABASE_DB_URL`, then `npm run seed:auth`.
    It must create **Elena Torres** (`elena.torres@example.com`, Dispatcher) as
    the mandatory non-Full verification account. See "Why Elena" below.
-3. Turn auth on: rename `src/proxy.disabled.ts` to `src/proxy.ts` with the
+2. Turn auth on: rename `src/proxy.disabled.ts` to `src/proxy.ts` with the
    `updateSession` implementation, wire `login-form.tsx` to `signIn` from
    `src/server/auth-actions.ts`, and gate `dashboard/layout.tsx` on
    `requireAuth()`.
-4. Convert Clients first. It has the fewest dependencies and a working query
+3. Convert Clients first. It has the fewest dependencies and a working query
    module. Then Deals.
-5. Build the quote builder on a new `sales/[id]` route.
-6. Then Warehouse, Calendar, Documents, Settings.
-7. Dashboard KPI cards last: several are currently hardcoded literals and become
+4. Build the quote builder on a new `sales/[id]` route.
+5. Then Warehouse, Calendar, Documents, Settings.
+6. Dashboard KPI cards last: several are currently hardcoded literals and become
    real aggregate queries.
 
 ## Rules that are load-bearing
