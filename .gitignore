@@ -41,3 +41,6 @@ dev.log
 
 # supabase cli local state
 supabase/.temp/
+
+# derived: migrations mechanically split for chunked application
+supabase/migrations/parts/
