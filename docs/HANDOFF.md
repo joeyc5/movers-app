@@ -53,6 +53,31 @@ Be direct about this with Joey; none of it is hidden.
 6. All three scripts are **built, not verified**. No DB connection or admin API
    call has been exercised from them.
 
+## Exactly where the migration stopped
+
+As of handoff, `supabase_migrations.schema_migrations` showed applied through
+`0010_seed_part03`. Confirmed landed and verified: 27 staff with all 27 role
+links resolved (the citext canary passes), 31 staff_locations, 39
+role_permission_sets, 25 clients with status distribution Active 10 /
+In Storage 4 / Lead 4 / Past 4 / Inactive 3, zero unowned clients, and the five
+clients owned by the Deactivated rep resolving correctly to CLT-1007, CLT-1010,
+CLT-1014, CLT-1018 and CLT-1022.
+
+Still to apply when this was written: `0010_seed_part04`, `part05`, `part06`,
+then `9999_security_guard_part01` and `part02`. A background agent was mid-run
+on part04, so some or all may have landed since.
+
+Check what is applied:
+
+    select name from supabase_migrations.schema_migrations order by name;
+
+Then apply whatever is missing, in filename order, from
+`supabase/migrations/parts/`, using `mcp__claude_ai_Supabase__apply_migration`.
+Each part is its own transaction, so re-applying one that already succeeded will
+fail on a duplicate key rather than corrupt anything. `0010_seed` is
+single-pass past its quote step: it raises 23505 on `quotes_code_key` if run
+twice, before any line item exists.
+
 ## Next steps, in order
 
 1. Confirm the seed finished. Run the verification numbers in "How to check the
