@@ -11,10 +11,15 @@
     "check": "biome check",
     "check:fix": "biome check --write",
     "prepare": "husky",
-    "generate:presets": "ts-node -P tsconfig.scripts.json src/scripts/generate-theme-presets.ts"
+    "generate:presets": "ts-node -P tsconfig.scripts.json src/scripts/generate-theme-presets.ts",
+    "seed:auth": "ts-node -P tsconfig.scripts.json scripts/seed-auth-users.ts",
+    "seed:documents": "ts-node -P tsconfig.scripts.json scripts/seed-documents.ts",
+    "seed:dev": "ts-node -P tsconfig.scripts.json scripts/seed-dev.ts"
   },
   "lint-staged": {
-    "*.{js,ts,jsx,tsx}": ["biome check --write --no-errors-on-unmatched"]
+    "*.{js,ts,jsx,tsx}": [
+      "biome check --write --no-errors-on-unmatched"
+    ]
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
@@ -24,6 +29,8 @@
     "@fullcalendar/react": "^7.0.2",
     "@hookform/resolvers": "^5.9.1",
     "@shadcn/react": "^0.3.0",
+    "@supabase/ssr": "^0.12.5",
+    "@supabase/supabase-js": "^2.112.4",
     "@tanstack/react-table": "^9.1.2",
     "@vercel/analytics": "^2.0.1",
     "class-variance-authority": "^0.7.1",
@@ -59,12 +66,14 @@
     "@tailwindcss/postcss": "^4.3.3",
     "@types/d3-geo": "^3.1.1",
     "@types/node": "^22.20.1",
+    "@types/pg": "^8.23.1",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
     "@types/topojson-client": "^3.1.5",
     "babel-plugin-react-compiler": "^1.0.0",
     "husky": "^9.1.7",
     "lint-staged": "^16.4.0",
+    "pg": "^8.23.0",
     "postcss": "^8.5.26",
     "tailwindcss": "^4.1.5",
     "ts-node": "^10.9.2",

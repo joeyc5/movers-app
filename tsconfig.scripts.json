@@ -4,5 +4,5 @@
     "module": "CommonJS",
     "moduleResolution": "node"
   },
-  "include": ["src/scripts/**/*.ts"]
+  "include": ["src/scripts/**/*.ts", "scripts/**/*.ts"]
 }
