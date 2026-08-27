@@ -23,7 +23,7 @@ import { statusMeta, type UserRow } from "./data";
 function RoleCell({ role, team }: { role: string; team: string }) {
   return (
     <div className="grid gap-0.5">
-      <span className="whitespace-nowrap">{role}</span>
+      <span className="sm:whitespace-nowrap">{role}</span>
       <span className="text-muted-foreground text-xs">{team}</span>
     </div>
   );
@@ -150,7 +150,6 @@ export const usersColumns: ColumnDef<DataTableFeatures, UserRow>[] = [
         </Subscribe>
       </div>
     ),
-    enableHiding: false,
     enableSorting: false,
   },
   {
@@ -165,7 +164,9 @@ export const usersColumns: ColumnDef<DataTableFeatures, UserRow>[] = [
     cell: ({ row }) => (
       <div className="flex items-center gap-3">
         <AvatarCell name={row.original.name} lastActive={row.original.lastActive} />
-        <div className="min-w-0">
+        {/* The max-w clamp lets the cell truncate at 390px; auto-layout
+            tables never shrink below content min width on their own. */}
+        <div className="min-w-0 max-w-24 sm:max-w-none">
           <div className="truncate font-medium text-foreground text-sm">{row.original.name}</div>
           <div className="truncate text-muted-foreground text-sm">{row.original.email}</div>
         </div>
@@ -229,7 +230,6 @@ export const usersColumns: ColumnDef<DataTableFeatures, UserRow>[] = [
         </DropdownMenu>
       </div>
     ),
-    enableHiding: false,
     enableSorting: false,
   },
 ];

@@ -15,6 +15,7 @@ import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle }
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { Kbd } from "@/components/ui/kbd";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { dataTableFeatures } from "@/lib/data-table-features";
 
 import { clientsColumns } from "./clients-columns";
@@ -22,6 +23,13 @@ import { ClientsTable } from "./clients-table";
 import { type Client, filters } from "./data";
 
 export function ClientsPanel({ clients }: { clients: Client[] }) {
+  // Derived from the rows rather than hardcoded: the owner list is whatever
+  // staff actually own accounts, including deactivated ones.
+  const ownerOptions = React.useMemo(
+    () => ["All", ...Array.from(new Set(clients.map((client) => client.accountOwner))).sort()],
+    [clients],
+  );
+
   const [rowSelection, setRowSelection] = React.useState({});
   const [sorting, setSorting] = React.useState<SortingState>([{ id: "lastActivityDate", desc: true }]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
@@ -32,6 +40,22 @@ export function ClientsPanel({ clients }: { clients: Client[] }) {
     pageIndex: 0,
     pageSize: 10,
   });
+
+  // Same responsive rule as Documents: secondary columns leave below md
+  // instead of forcing the table into an undiscoverable horizontal scroll.
+  const isMobile = useIsMobile();
+  React.useEffect(() => {
+    setColumnVisibility((visibility) => ({
+      ...visibility,
+      select: !isMobile,
+      type: !isMobile,
+      accountOwner: !isMobile,
+      lastActivityDate: !isMobile,
+      // The name already links to the client; the row menu adds nothing a
+      // phone needs and its width alone forces horizontal clipping.
+      actions: !isMobile,
+    }));
+  }, [isMobile]);
 
   const table = useTable({
     features: dataTableFeatures,
@@ -57,8 +81,7 @@ export function ClientsPanel({ clients }: { clients: Client[] }) {
   const searchQuery = (table.getColumn("search")?.getFilterValue() as string | undefined) ?? "";
   const typeFilter = (table.getColumn("type")?.getFilterValue() as string | undefined) ?? filters.type[0];
   const statusFilter = (table.getColumn("status")?.getFilterValue() as string | undefined) ?? filters.status[0];
-  const accountOwnerFilter =
-    (table.getColumn("accountOwner")?.getFilterValue() as string | undefined) ?? filters.accountOwner[0];
+  const accountOwnerFilter = (table.getColumn("accountOwner")?.getFilterValue() as string | undefined) ?? "All";
   const selectedCount = table.getFilteredSelectedRowModel().rows.length;
 
   function setColumnSelectFilter(columnId: string, value: string) {
@@ -147,7 +170,7 @@ export function ClientsPanel({ clients }: { clients: Client[] }) {
               </SelectTrigger>
               <SelectContent position="popper" align="start">
                 <SelectGroup>
-                  {filters.accountOwner.map((option) => (
+                  {ownerOptions.map((option) => (
                     <SelectItem key={option} value={option}>
                       {option}
                     </SelectItem>

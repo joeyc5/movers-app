@@ -16,6 +16,7 @@ import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/in
 import { Kbd } from "@/components/ui/kbd";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { dataTableFeatures } from "@/lib/data-table-features";
 
 import { filters, type UserRow } from "./data";
@@ -34,6 +35,21 @@ export function UsersPanel({ users }: { users: UserRow[] }) {
     pageIndex: 0,
     pageSize: 10,
   });
+
+  // Same responsive rule as Documents: secondary columns leave below md
+  // instead of forcing the table into an undiscoverable horizontal scroll.
+  const isMobile = useIsMobile();
+  React.useEffect(() => {
+    setColumnVisibility((visibility) => ({
+      ...visibility,
+      select: !isMobile,
+      location: !isMobile,
+      joinedDate: !isMobile,
+      // The status filter still applies; the avatar badge carries activity.
+      status: !isMobile,
+      actions: !isMobile,
+    }));
+  }, [isMobile]);
 
   const table = useTable({
     features: dataTableFeatures,

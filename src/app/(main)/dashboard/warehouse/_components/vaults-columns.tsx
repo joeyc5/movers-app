@@ -100,7 +100,11 @@ export const vaultsColumns: ColumnDef<DataTableFeatures, Vault>[] = [
     header: "Customer",
     cell: ({ row }) => {
       const name = getCustomerName(row.original.assignedCustomerId);
-      return name ? <div className="text-sm">{name}</div> : <span className="text-muted-foreground text-sm">—</span>;
+      return name ? (
+        <div className="max-w-20 truncate text-sm sm:max-w-none">{name}</div>
+      ) : (
+        <span className="text-muted-foreground text-sm">—</span>
+      );
     },
   },
   {
@@ -156,7 +160,6 @@ export const vaultsColumns: ColumnDef<DataTableFeatures, Vault>[] = [
         </DropdownMenu>
       </div>
     ),
-    enableHiding: false,
     enableSorting: false,
   },
 ];

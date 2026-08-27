@@ -1,118 +1,62 @@
-import { ArrowUpRight, TrendingDown, TrendingUp } from "lucide-react";
-
-import { Badge } from "@/components/ui/badge";
-import { Card, CardAction, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/utils";
+import { getQuoteStats } from "@/server/queries/quotes";
 
-import { deals } from "./data";
+import type { PipelineDeal } from "./data";
 
 const openStages = ["Discovery", "Qualified", "Proposal Sent", "Negotiation"];
 
-export function KpiCards() {
+/**
+ * Every figure is measured from deals and quotes as they stand. No
+ * period-over-period badges: the data carries no prior period to compare to.
+ */
+export async function KpiCards({ deals }: { deals: PipelineDeal[] }) {
+  const stats = await getQuoteStats();
+
   const openDeals = deals.filter((deal) => openStages.includes(deal.stage));
   const openPipelineValue = openDeals.reduce((total, deal) => total + deal.estimatedValue, 0);
-  const bookedValue = deals
-    .filter((deal) => deal.stage === "Won")
-    .reduce((total, deal) => total + deal.estimatedValue, 0);
+  const wonDeals = deals.filter((deal) => deal.stage === "Won");
+  const bookedValue = wonDeals.reduce((total, deal) => total + deal.estimatedValue, 0);
+
+  const cards = [
+    {
+      label: "Open Pipeline Value",
+      value: formatCurrency(openPipelineValue),
+      detail: `${openDeals.length} open ${openDeals.length === 1 ? "deal" : "deals"}`,
+    },
+    {
+      label: "Booked",
+      value: formatCurrency(bookedValue),
+      detail: `${wonDeals.length} won ${wonDeals.length === 1 ? "deal" : "deals"}`,
+    },
+    {
+      label: "Quotes Awaiting Answer",
+      value: String(stats.outstandingCount),
+      detail: `${formatCurrency(stats.outstandingValue)} sent and undecided`,
+    },
+    {
+      label: "Quote Acceptance",
+      value: stats.decidedCount > 0 ? `${Math.round((stats.acceptedCount / stats.decidedCount) * 100)}%` : "—",
+      detail:
+        stats.decidedCount > 0
+          ? `${stats.acceptedCount} of ${stats.decidedCount} decided ${stats.decidedCount === 1 ? "quote" : "quotes"} accepted`
+          : "No decided quotes yet",
+    },
+  ];
 
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-      <Card>
-        <CardHeader>
-          <CardDescription>Open Pipeline Value</CardDescription>
-          <CardAction>
-            <ArrowUpRight className="size-4" />
-          </CardAction>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          <div className="flex items-center gap-3">
-            <span className="text-3xl leading-none tracking-tight">{formatCurrency(openPipelineValue)}</span>
-            <Badge
-              variant="outline"
-              className="border-green-200 bg-green-500/10 text-green-700 dark:border-green-900/40 dark:bg-green-500/15 dark:text-green-300"
-            >
-              <TrendingUp />
-              +9%
-            </Badge>
-          </div>
-          <p className="text-sm">
-            <span className="font-medium text-foreground">{openDeals.length}</span>{" "}
-            <span className="text-muted-foreground">open deals</span>
-          </p>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardDescription>Booked This Month</CardDescription>
-          <CardAction>
-            <ArrowUpRight className="size-4" />
-          </CardAction>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          <div className="flex items-center gap-3">
-            <span className="text-3xl leading-none tracking-tight">{formatCurrency(bookedValue)}</span>
-            <Badge
-              variant="outline"
-              className="border-green-200 bg-green-500/10 text-green-700 dark:border-green-900/40 dark:bg-green-500/15 dark:text-green-300"
-            >
-              <TrendingUp />
-              +2 jobs
-            </Badge>
-          </div>
-          <p className="text-sm">
-            <span className="font-medium text-foreground">{formatCurrency(14300)}</span>{" "}
-            <span className="text-muted-foreground">last month</span>
-          </p>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardDescription>New Leads This Week</CardDescription>
-          <CardAction>
-            <ArrowUpRight className="size-4" />
-          </CardAction>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          <div className="flex items-center gap-3">
-            <span className="text-3xl leading-none tracking-tight">7</span>
-            <Badge variant="outline" className="border-destructive/20 bg-destructive/10 text-destructive">
-              <TrendingDown />
-              -3
-            </Badge>
-          </div>
-          <p className="text-sm">
-            <span className="font-medium text-foreground">10</span>{" "}
-            <span className="text-muted-foreground">last week</span>
-          </p>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardDescription>Quote-to-Book Rate</CardDescription>
-          <CardAction>
-            <ArrowUpRight className="size-4" />
-          </CardAction>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          <div className="flex items-center gap-3">
-            <span className="text-3xl leading-none tracking-tight">41%</span>
-            <Badge
-              variant="outline"
-              className="border-green-200 bg-green-500/10 text-green-700 dark:border-green-900/40 dark:bg-green-500/15 dark:text-green-300"
-            >
-              <TrendingUp />
-              +4%
-            </Badge>
-          </div>
-          <p className="text-sm">
-            <span className="font-medium text-foreground">37%</span>{" "}
-            <span className="text-muted-foreground">last month</span>
-          </p>
-        </CardContent>
-      </Card>
+      {cards.map((card) => (
+        <Card key={card.label}>
+          <CardHeader>
+            <CardDescription>{card.label}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <span className="text-3xl leading-none tracking-tight tabular-nums">{card.value}</span>
+            <p className="text-muted-foreground text-sm">{card.detail}</p>
+          </CardContent>
+        </Card>
+      ))}
     </div>
   );
 }

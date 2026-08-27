@@ -53,11 +53,19 @@ export function RolesTable({ table }: { table: ReactTable<DataTableFeatures, Rol
 
   const start = filteredRows.length === 0 ? 0 : pageIndex * pageSize + 1;
   const end = filteredRows.length === 0 ? 0 : start + pageRows.length - 1;
-  const colCount = table.getVisibleLeafColumns().length;
+  const visibleColumnIds = new Set(table.getVisibleLeafColumns().map((column) => column.id));
+  const colCount = visibleColumnIds.size;
 
   return (
     <>
-      <Table className="w-full table-fixed border-collapse" style={{ minWidth: table.getTotalSize() }}>
+      {/* Sum only the VISIBLE columns: getTotalSize() counts hidden ones and
+          would hold the mobile table at its full desktop width. */}
+      <Table
+        className="w-full table-fixed border-collapse"
+        style={{
+          minWidth: table.getVisibleLeafColumns().reduce((total, column) => total + column.getSize(), 0),
+        }}
+      >
         <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow key={headerGroup.id} className="border-y hover:bg-transparent [&>:not(:last-child)]:border-r">
@@ -81,6 +89,7 @@ export function RolesTable({ table }: { table: ReactTable<DataTableFeatures, Rol
                 group={group}
                 totalCount={totalGroupCounts.get(group.label) ?? 0}
                 colCount={colCount}
+                visibleColumnIds={visibleColumnIds}
               />
             ))
           ) : (
@@ -170,10 +179,12 @@ function TableBodyGroup({
   group,
   totalCount,
   colCount,
+  visibleColumnIds,
 }: {
   group: { label: string; rows: RoleTableRow[] };
   totalCount: number;
   colCount: number;
+  visibleColumnIds: Set<string>;
 }) {
   return (
     <>
@@ -185,23 +196,31 @@ function TableBodyGroup({
           </Badge>
         </TableCell>
       </TableRow>
-      {group.rows.map((row) => (
-        <TableRow key={row.id} className="h-12 hover:bg-muted/20">
-          {row.getVisibleCells().map((cell, index) => (
-            <TableCell
-              key={cell.id}
-              style={{ width: cell.column.getSize() }}
-              className={cn(
-                "border-r px-4 align-middle",
-                index === row.getVisibleCells().length - 1 && "border-r-0",
-                index === 0 ? "text-left" : "text-center",
-              )}
-            >
-              <FlexRender cell={cell} />
-            </TableCell>
-          ))}
-        </TableRow>
-      ))}
+      {group.rows.map((row) => {
+        // Filter against the table's visible leaf columns: the row-level
+        // getVisibleCells()/getIsVisible() caches do not track a visibility
+        // change made after the row model was built, and stale cells
+        // rendered against fresh headers.
+        const cells = row.getAllCells().filter((cell) => visibleColumnIds.has(cell.column.id));
+
+        return (
+          <TableRow key={row.id} className="h-12 hover:bg-muted/20">
+            {cells.map((cell, index) => (
+              <TableCell
+                key={cell.id}
+                style={{ width: cell.column.getSize() }}
+                className={cn(
+                  "border-r px-4 align-middle",
+                  index === cells.length - 1 && "border-r-0",
+                  index === 0 ? "text-left" : "text-center",
+                )}
+              >
+                <FlexRender cell={cell} />
+              </TableCell>
+            ))}
+          </TableRow>
+        );
+      })}
     </>
   );
 }

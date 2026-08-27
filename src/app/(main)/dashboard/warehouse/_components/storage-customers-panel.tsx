@@ -9,6 +9,7 @@ import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle }
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { dataTableFeatures } from "@/lib/data-table-features";
 
 import { type StorageCustomer, storageCustomerFilters } from "./data";
@@ -19,6 +20,23 @@ export function StorageCustomersPanel({ storageCustomers }: { storageCustomers: 
   const [columnVisibility, setColumnVisibility] = React.useState<ColumnVisibilityState>({
     search: false,
   });
+
+  // Same responsive rule as Documents: secondary columns leave below md
+  // instead of forcing the table into an undiscoverable horizontal scroll.
+  const isMobile = useIsMobile();
+  React.useEffect(() => {
+    setColumnVisibility((visibility) => ({
+      ...visibility,
+      vaults: !isMobile,
+      warehouseLocation: !isMobile,
+      nextBillingDate: !isMobile,
+      // Status (Past Due, Move-Out Scheduled) is the operational signal on a
+      // phone; the rate lives one tap away on the agreement.
+      monthlyRate: !isMobile,
+      // The customer cell already links to the client record.
+      actions: !isMobile,
+    }));
+  }, [isMobile]);
 
   const table = useTable({
     features: dataTableFeatures,

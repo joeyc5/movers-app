@@ -1,7 +1,12 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
-import { type ColumnFiltersState, type PaginationState, useTable } from "@tanstack/react-table";
+import {
+  type ColumnFiltersState,
+  type ColumnVisibilityState,
+  type PaginationState,
+  useTable,
+} from "@tanstack/react-table";
 import { AlertTriangle, ChevronRight, Search } from "lucide-react";
 
 import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -9,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { dataTableFeatures } from "@/lib/data-table-features";
 
 import { rolesColumns } from "./roles-table/columns";
@@ -41,10 +47,28 @@ function getRoleGroupFilterValue(typeFilter: string) {
 
 export function RolesPanel({ roles }: { roles: Role[] }) {
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const [columnVisibility, setColumnVisibility] = useState<ColumnVisibilityState>({
+    group: false,
+    search: false,
+  });
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
     pageSize: 12,
   });
+
+  // Same responsive rule as Documents: secondary columns leave below md
+  // instead of forcing the table into an undiscoverable horizontal scroll.
+  const isMobile = useIsMobile();
+  useEffect(() => {
+    setColumnVisibility((visibility) => ({
+      ...visibility,
+      accessLevel: !isMobile,
+      permissionSets: !isMobile,
+      lastReview: !isMobile,
+      owner: !isMobile,
+      status: !isMobile,
+    }));
+  }, [isMobile]);
 
   const table = useTable({
     features: dataTableFeatures,
@@ -55,13 +79,11 @@ export function RolesPanel({ roles }: { roles: Role[] }) {
       minSize: 80,
       maxSize: 420,
     },
-    state: { columnFilters, pagination },
+    state: { columnFilters, columnVisibility, pagination },
     onColumnFiltersChange: setColumnFilters,
+    onColumnVisibilityChange: setColumnVisibility,
     onPaginationChange: setPagination,
     autoResetPageIndex: false,
-    initialState: {
-      columnVisibility: { group: false, search: false },
-    },
   });
 
   const search = (table.getColumn("search")?.getFilterValue() as string | undefined) ?? "";

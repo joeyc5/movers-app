@@ -45,9 +45,11 @@ function NameCell({ client }: { client: Client }) {
       <Avatar size="lg">
         <AvatarFallback>{getInitials(client.name)}</AvatarFallback>
       </Avatar>
-      <div className="min-w-0">
+      {/* The max-w clamp is what lets the cell truncate at 390px: an auto-layout
+          table never shrinks a cell below its content's min width on its own. */}
+      <div className="min-w-0 max-w-36 sm:max-w-none">
         <Link
-          className="truncate font-medium text-foreground text-sm hover:underline"
+          className="block truncate font-medium text-foreground text-sm hover:underline"
           href={`/dashboard/clients/${client.id}`}
         >
           {client.name}
@@ -166,7 +168,6 @@ export const clientsColumns: ColumnDef<DataTableFeatures, Client>[] = [
         </DropdownMenu>
       </div>
     ),
-    enableHiding: false,
     enableSorting: false,
   },
 ];

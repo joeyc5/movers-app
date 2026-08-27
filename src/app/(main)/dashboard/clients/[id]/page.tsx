@@ -1,8 +1,8 @@
 import { notFound } from "next/navigation";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { getClientByCode } from "@/server/queries/clients";
 
-import { clients } from "../_components/data";
 import { ClientHeader } from "./_components/client-header";
 import { ClientOverview } from "./_components/client-overview";
 import { Invoice } from "./_components/invoice/invoice";
@@ -13,7 +13,7 @@ interface PageProps {
 
 export default async function Page({ params }: PageProps) {
   const { id } = await params;
-  const client = clients.find((candidate) => candidate.id === id);
+  const client = await getClientByCode(id);
 
   if (!client) {
     notFound();

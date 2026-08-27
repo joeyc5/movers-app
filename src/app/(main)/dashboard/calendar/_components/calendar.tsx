@@ -16,18 +16,32 @@ import { EventCalendarViews } from "@/components/calendar/event-calendar-views";
 import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const views = [
   { key: "dayGridMonth", label: "Month" },
   { key: "timeGridWeek", label: "Week" },
   { key: "timeGridDay", label: "Day" },
+  { key: "listMonth", label: "List" },
 ];
 
 const plugins = [dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin, multiMonthPlugin];
 
 export function EventCalendar({ events, addLabel }: { events: EventInput[]; addLabel: string }) {
   const controller = useCalendarController();
+  const isMobile = useIsMobile();
   const [eventCount, setEventCount] = React.useState(0);
+
+  // A 7-column month grid at 390px truncates every title to a few characters
+  // and scrolls past a mostly-empty grid. The list view is the phone default;
+  // the month grid stays one select away.
+  const appliedMobileDefault = React.useRef(false);
+  React.useEffect(() => {
+    if (isMobile && !appliedMobileDefault.current) {
+      appliedMobileDefault.current = true;
+      controller.changeView("listMonth");
+    }
+  }, [isMobile, controller]);
   const [dateInfo, setDateInfo] = React.useState(() => {
     const now = new Date();
 

@@ -9,14 +9,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn, getInitials } from "@/lib/utils";
+import { getClients } from "@/server/queries/clients";
 
-import { clients, statusMeta } from "../../clients/_components/data";
+import { statusMeta } from "../../clients/_components/data";
 
-const recentClients = [...clients]
-  .sort((a, b) => new Date(b.lastActivityDate).getTime() - new Date(a.lastActivityDate).getTime())
-  .slice(0, 8);
+export async function RecentClients() {
+  // getClients() already orders by last activity; the card shows the top 8.
+  const recentClients = (await getClients()).slice(0, 8);
 
-export function RecentClients() {
   return (
     <Card>
       <CardHeader>
@@ -37,10 +37,10 @@ export function RecentClients() {
           <TableHeader>
             <TableRow>
               <TableHead className="py-3 font-normal">Client</TableHead>
-              <TableHead className="py-3 font-normal">Type</TableHead>
+              <TableHead className="hidden py-3 font-normal md:table-cell">Type</TableHead>
               <TableHead className="py-3 font-normal">Status</TableHead>
-              <TableHead className="py-3 font-normal">Owner</TableHead>
-              <TableHead className="py-3 text-right font-normal">Last Activity</TableHead>
+              <TableHead className="hidden py-3 font-normal md:table-cell">Owner</TableHead>
+              <TableHead className="hidden py-3 text-right font-normal sm:table-cell">Last Activity</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -55,14 +55,14 @@ export function RecentClients() {
                         <AvatarFallback>{getInitials(client.name)}</AvatarFallback>
                       </Avatar>
                       <Link
-                        className="truncate font-medium text-sm hover:underline"
+                        className="block max-w-40 truncate font-medium text-sm hover:underline sm:max-w-none"
                         href={`/dashboard/clients/${client.id}`}
                       >
                         {client.name}
                       </Link>
                     </div>
                   </TableCell>
-                  <TableCell className="py-3">
+                  <TableCell className="hidden py-3 md:table-cell">
                     <Badge className="gap-1.5 font-medium" variant="outline">
                       {client.type === "Commercial" ? (
                         <Building2 className="size-3.5" />
@@ -78,8 +78,8 @@ export function RecentClients() {
                       {client.status}
                     </Badge>
                   </TableCell>
-                  <TableCell className="py-3 text-sm">{client.accountOwner}</TableCell>
-                  <TableCell className="py-3 text-right text-sm">
+                  <TableCell className="hidden py-3 text-sm md:table-cell">{client.accountOwner}</TableCell>
+                  <TableCell className="hidden py-3 text-right text-sm sm:table-cell">
                     {format(new Date(client.lastActivityDate), "MMM d, yyyy")}
                   </TableCell>
                 </TableRow>

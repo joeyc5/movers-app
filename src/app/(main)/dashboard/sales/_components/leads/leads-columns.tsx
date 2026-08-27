@@ -1,17 +1,12 @@
 "use client";
+import Link from "next/link";
+
 import type { ColumnDef } from "@tanstack/react-table";
 import { format } from "date-fns";
-import { ArrowRight, MoreHorizontal } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import type { DataTableFeatures } from "@/lib/data-table-features";
 import { cn, formatCurrency } from "@/lib/utils";
 
@@ -43,7 +38,14 @@ export const leadsColumns: ColumnDef<DataTableFeatures, PipelineDeal>[] = [
   {
     accessorKey: "clientName",
     header: "Client",
-    cell: ({ row }) => <div className="font-medium text-sm">{row.original.clientName}</div>,
+    cell: ({ row }) => (
+      <Link
+        href={`/dashboard/sales/${row.original.id}`}
+        className="block max-w-32 truncate font-medium text-sm hover:underline sm:max-w-none"
+      >
+        {row.original.clientName}
+      </Link>
+    ),
   },
   {
     accessorKey: "stage",
@@ -85,7 +87,9 @@ export const leadsColumns: ColumnDef<DataTableFeatures, PipelineDeal>[] = [
     accessorFn: (row) => row.estimatedValue,
     header: "Est. Value",
     cell: ({ row }) => (
-      <div className="font-medium text-sm tabular-nums">{formatCurrency(row.original.estimatedValue)}</div>
+      <Link href={`/dashboard/sales/${row.original.id}`} className="font-medium text-sm tabular-nums hover:underline">
+        {formatCurrency(row.original.estimatedValue)}
+      </Link>
     ),
   },
   {
@@ -96,31 +100,22 @@ export const leadsColumns: ColumnDef<DataTableFeatures, PipelineDeal>[] = [
   },
   {
     id: "actions",
-    header: () => <div className="text-right">Actions</div>,
+    header: () => <div className="text-right">Open</div>,
     cell: ({ row }) => (
       <div className="text-right">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              aria-label={`Open actions for ${row.original.clientName}`}
-              className="size-8 rounded-md text-muted-foreground hover:bg-muted/50"
-              size="icon-sm"
-              variant="ghost"
-            >
-              <MoreHorizontal className="size-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem>Log activity</DropdownMenuItem>
-            <DropdownMenuItem>Schedule survey</DropdownMenuItem>
-            <DropdownMenuItem>Send proposal</DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem variant="destructive">Mark lost</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <Button
+          asChild
+          aria-label={`Open deal for ${row.original.clientName}`}
+          className="size-8 rounded-md text-muted-foreground hover:bg-muted/50"
+          size="icon-sm"
+          variant="ghost"
+        >
+          <Link href={`/dashboard/sales/${row.original.id}`}>
+            <ArrowRight className="size-4" />
+          </Link>
+        </Button>
       </div>
     ),
-    enableHiding: false,
     enableSorting: false,
   },
 ];

@@ -9,16 +9,42 @@ import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle }
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { dataTableFeatures } from "@/lib/data-table-features";
 
 import { leadsFilters, type PipelineDeal } from "../data";
 import { leadsColumns } from "./leads-columns";
 
 export function LeadsPanel({ deals }: { deals: PipelineDeal[] }) {
+  // Owner options come from the rows, not a hardcoded list, so a deal owned
+  // by any staff member is always filterable.
+  const ownerOptions = React.useMemo(
+    () => ["All", ...Array.from(new Set(deals.map((deal) => deal.ownerName))).sort()],
+    [deals],
+  );
+
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = React.useState<ColumnVisibilityState>({
     search: false,
   });
+
+  // Same responsive rule as Documents: secondary columns leave below md
+  // instead of forcing the table into an undiscoverable horizontal scroll.
+  const isMobile = useIsMobile();
+  React.useEffect(() => {
+    setColumnVisibility((visibility) => ({
+      ...visibility,
+      id: !isMobile,
+      // The stage filter above the table still works on the hidden column,
+      // and the board tab shows stages; the row keeps client and value.
+      stage: !isMobile,
+      route: !isMobile,
+      moveDate: !isMobile,
+      ownerName: !isMobile,
+      // Both the client name and the value already link to the deal.
+      actions: !isMobile,
+    }));
+  }, [isMobile]);
 
   const table = useTable({
     features: dataTableFeatures,
@@ -32,7 +58,7 @@ export function LeadsPanel({ deals }: { deals: PipelineDeal[] }) {
 
   const searchQuery = (table.getColumn("search")?.getFilterValue() as string | undefined) ?? "";
   const stageFilter = (table.getColumn("stage")?.getFilterValue() as string | undefined) ?? leadsFilters.stage[0];
-  const ownerFilter = (table.getColumn("ownerName")?.getFilterValue() as string | undefined) ?? leadsFilters.owner[0];
+  const ownerFilter = (table.getColumn("ownerName")?.getFilterValue() as string | undefined) ?? "All";
 
   function setColumnSelectFilter(columnId: string, value: string) {
     table.getColumn(columnId)?.setFilterValue(value === "All" ? undefined : value);
@@ -89,7 +115,7 @@ export function LeadsPanel({ deals }: { deals: PipelineDeal[] }) {
             </SelectTrigger>
             <SelectContent position="popper" align="start">
               <SelectGroup>
-                {leadsFilters.owner.map((option) => (
+                {ownerOptions.map((option) => (
                   <SelectItem key={option} value={option}>
                     {option}
                   </SelectItem>

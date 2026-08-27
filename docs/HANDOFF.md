@@ -1,250 +1,136 @@
-# Handoff: movers-app backend migration
+# Handoff: movers-app
 
-Written 2026-08-27. Everything below was measured, not assumed.
+Updated 2026-08-27, end of the auth + conversion + quote builder session.
+Everything below was measured in a real browser against the live database,
+not assumed. The previous handoff described the backend-only state; this one
+replaces it.
 
 ## What this project is
 
-A movers CRM, forked from the "Studio Admin" Next.js template. A previous pass
-rebuilt the whole information architecture (Dashboard, Sales, Calendar,
-Warehouse, Clients, Documents, Settings). Until this session every screen read a
-static in-memory TypeScript array: nothing persisted, every action button was
-inert, and the login forms only popped a toast.
+A movers CRM, forked from the "Studio Admin" Next.js template, backed by
+Supabase project `movers-app`, ref `jannhzvqrsumtscidtkx` (org JC Media,
+us-west-1, Postgres 17.6). All data in the app is filler.
 
-This session gave it a real backend.
+## What is DONE and verified in a browser
 
-## Current state
+**Auth is on.** Three auth users exist (created via SQL because the classifier
+blocks CLI secret-key retrieval; `scripts/seed-auth-users.ts` itself remains
+unrun). Password login, `claim_staff_for_current_user`, sign-out, the
+`/auth/v1/login` redirect for signed-in users, and the unauthorized page's
+sign-out exit were all exercised. Credentials are in `.env.local` (gitignored).
 
-**Database:** Supabase project `movers-app`, ref `jannhzvqrsumtscidtkx`, org
-JC Media, us-west-1, Postgres 17.6. $10/mo. The ref is recorded in
-`~/claude-config/CLAUDE.md` next to the other five ventures.
+- `src/proxy.ts` refreshes tokens; it is NOT the gate. `requireAuth()` in
+  `dashboard/layout.tsx` is, with RLS beneath it.
+- The dashboard shell shows the real signed-in staff member (name, role,
+  avatar) in the header menu and sidebar footer. The fake account switcher,
+  `src/data/users.ts`, the register routes, the `auth/v2` tree, and the dead
+  Google button are deleted.
 
-Applied and verified: 26 tables, 4 views (all `security_invoker = true`), 88 RLS
-policies, per-table grants, 21 `app` helper functions, and one private storage
-bucket named `documents`.
+**Converted to live reads:** Dashboard metric cards (real aggregates,
+verified to reproduce the seed's measured figures: $21,100 booked, 52%
+occupancy, 4,110 of 7,900 ft³, 14 vaults), Recent Client Activity, Clients
+list, Client detail, Sales KPI cards, Pipeline board, Leads table.
 
-**Migrations** live in `supabase/migrations/`, numbered 0001 through 0010 plus
-`9999_security_guard.sql`. They are the source of truth. `supabase/migrations/parts/`
-is gitignored: those are the same files mechanically split at top-level statement
-boundaries (round-trip verified byte-identical) because a single large payload
-hangs the apply tool.
+**The quote builder exists and works end to end.** `/dashboard/sales/[id]`
+(deal code) with `?quote=` selecting among the deal's quotes.
 
-**App code:** Supabase client factories, the cached auth boundary, sign-in and
-sign-out actions, the OAuth callback route, and read-path query modules for
-clients, deals, warehouse and calendar. All type-check clean.
+- The DB computes every dollar. The builder writes inputs only; the summary
+  rail renders the row Postgres returned. Draft edits autosave (600ms
+  debounce) and were verified against the seed math: 3 movers x 10h = $2,310
+  with overtime, fuel surcharge 3.2% of labor = $73.92, percent deposit
+  bounded by total.
+- Lifecycle exercised as Morgan: create (code minted by `next_quote_code`),
+  edit, add/remove catalog line items, send (pricing freezes), accept
+  (write-back set the deal to $2,633.92 / source quote), delete draft.
+  QTE-2026-0003 on DEAL-3001 is the surviving artifact.
+- Accepting a quote also moves the deal to Won (best effort, in
+  `decideQuote`); the freeze/write-back triggers remain the DB's own.
+- Read-only callers (verified as Elena) get the record view with NO write
+  affordances; `canWriteQuotes()` in `src/server/queries/quotes.ts` mirrors
+  `has_any_perm(['proposals','pipeline'], true)` read-side. RLS still
+  enforces.
+
+**Mobile pass at a real emulated 390px.** Every table that overflowed now
+measures zero hidden pixels: clients, leads, storage customers, vaults,
+settings users, settings roles, recent activity. The pattern is
+breakpoint-synced `columnVisibility` plus a `max-w-* sm:max-w-none` clamp on
+name cells (auto-layout tables never shrink below content min width).
+Calendar defaults to the list view on phones (month grid one select away).
+The invoice paper preview holds a 0.7 scale floor and pans instead of
+rendering 5px text.
+
+## Landmines fixed this session, do not reintroduce
+
+- `overflow-x-hidden` on the dashboard layout's content wrapper silently
+  killed `position:sticky` for every descendant. It is now `overflow-x-clip`.
+  The builder's docked mobile total bar depends on this.
+- TanStack v9's row-level `getVisibleCells()`/`getIsVisible()` caches do not
+  track a visibility change made after the row model is built. The roles
+  table filters cells against `table.getVisibleLeafColumns()` instead.
+- Roles table `minWidth` now sums VISIBLE columns; `getTotalSize()` counted
+  hidden ones and held the mobile table at desktop width.
+- The `filters.accountOwner` / `leadsFilters.owner` hardcoded name lists are
+  gone; owner options derive from the rows.
 
 ## What is NOT done
 
-Be direct about this with Joey; none of it is hidden.
+1. **Warehouse, Calendar, Documents, Settings still read static arrays.**
+   Their query modules (warehouse, calendar) exist and are typed; documents
+   and settings have none yet. Their mobile layout defects are fixed.
+2. **Documents have no bytes.** `scripts/seed-documents.ts` is written and
+   unrun (needs `SUPABASE_SECRET_KEY` + `SUPABASE_DB_URL` exported).
+   Download and signed URLs 403 until it runs.
+3. **All three seed scripts remain built, not verified.** The auth users were
+   created via SQL instead.
+4. **Inert chrome buttons remain on every screen**: Add Client, Export, Hide,
+   Customize, Quick Create, calendar Add job/event, invoice Download PDF,
+   row-menu items like Edit details / Log activity / Record payment. They are
+   template capability markers; each should become real or be deleted when
+   its screen converts.
+5. **Lead Flow and Operations Volume charts are synthetic** (client-side
+   literals). No activity-history table exists to back them.
+6. **Pipeline drag does not persist**; the board is local state over real
+   rows.
+7. Known follow-ups carried forward: `company_billing_profile` broad read
+   exposes `routing_number` (split the banking columns, D21); leaked-password
+   protection is off in Auth settings (advisor WARN).
 
-1. **No screen reads from the database yet.** Every page still imports its
-   static seed array. The query modules exist and are typed against the real
-   schema, but nothing calls them.
-2. **The quote builder does not exist.** This is the feature Joey originally
-   asked for. The schema is built and the pricing math is verified, but there is
-   no `sales/[id]` route and no quote UI.
-3. **Auth is wired but not switched on.** `src/proxy.disabled.ts` is still
-   disabled, and the login forms still call their old toast handler. Turning the
-   gate on before auth users exist would lock the app out of its own screens.
-4. **No auth users exist.** `scripts/seed-auth-users.ts` is written but has
-   never been run. It needs `SUPABASE_SECRET_KEY` and `SUPABASE_DB_URL` exported
-   in the shell.
-5. **Documents have no bytes.** `scripts/seed-documents.ts` is written and
-   unrun. SQL cannot upload to Storage.
-6. All three scripts are **built, not verified**. No DB connection or admin API
-   call has been exercised from them.
+## Verify as Elena, not Morgan
 
-## The migration is COMPLETE
+Unchanged and still load-bearing: Admin/Owner are `access_level = 'Full'` and
+short-circuit every permission check. Elena Torres (Dispatcher, Scoped) is
+the account that exposes gaps. Reads are broad by design; a gated read ships
+as a blank screen because the sidebar is static and no screen has an
+access-denied state.
 
-All migrations applied and verified, including both parts of the security
-guard. The guard raises on any deviation, so a clean apply means all of its
-checks passed.
+## Security advisor state (checked this session)
 
-**The end-to-end test passes.** Booked revenue over Won deals reads exactly
-**21100.00**. Both Won deals are seeded at `estimated_value` 0.00, so that
-figure can only exist because the quote-acceptance write-back trigger fired.
-That single number confirms the crew-size labor math, the rate snapshotting,
-the rollup trigger firing on INSERT rather than UPDATE only, and the write-back,
-all working together on real rows.
+- `app.code_counters` RLS-no-policy INFO: intentional, both layers deny.
+- Eight SECURITY DEFINER RPCs callable by `authenticated` WARN: the
+  caller-facing API, each gates internally. Expected cost of the design.
+- Leaked-password protection disabled WARN: enable in Auth settings when the
+  app carries anything real.
 
-Every seed number measured and matching:
+## Rules that are load-bearing (carried forward)
 
-| | measured |
-|---|---|
-| staff / clients / deals | 27 / 25 / 15 |
-| vaults / agreements / events | 14 / 6 / 21 |
-| documents / folders | 15 / 6 |
-| roles / permission sets | 9 / 16 |
-| vault capacity / occupied / ratio | 7900 / 4110 / 52% |
-| V-206 occupancy (deliberate over-capacity) | 110 |
-| clients by status | Active 10, In Storage 4, Lead 4, Past 4, Inactive 3 |
-| tables without RLS | 0 |
-| private `documents` bucket | yes |
-| `storage.objects` policies | 3, and no DELETE policy |
-
-The citext canary passes: 27 staff with all 27 role links resolved, 31
-staff_locations, 39 role_permission_sets. Per-role counts sum to 27 over all
-staff and to 25 over the original UserRow emails, both correct. Sofia
-Marchetti's five clients resolve to CLT-1007, CLT-1010, CLT-1014, CLT-1018 and
-CLT-1022, which is the corrected list rather than the wrong one the design JSON
-carried.
-
-## Three things that will look like a broken migration and are not
-
-Read this before diagnosing anything.
-
-1. **All 27 `staff.auth_user_id` are NULL, so every screen will return zero
-   rows.** Until someone signs in and `claim_staff_for_current_user()` stamps
-   the link, `app.is_active_staff()` is false for everybody, and every RLS
-   policy in the app is built on it. The symptom is indistinguishable from a
-   failed migration: queries succeed, return nothing, raise no error. It is
-   correct behaviour. Seeding auth users is step 1 of Next Steps for this exact
-   reason.
-2. **The 15 document rows point at storage paths with no bytes behind them.**
-   SQL cannot upload to Storage. `scripts/seed-documents.ts` places the
-   placeholder objects; until it runs, Download and any signed URL will 403.
-3. **Verify as Elena Torres, never Morgan Ellis or Grace Chen.** Admin and Owner
-   are `access_level = 'Full'`, and `has_any_perm` short-circuits on that before
-   it ever reads `role_permission_sets`. Every gate passes for them whether the
-   policies are right or wrong.
-
-## Scope of what is verified
-
-The schema, policies, grants and seed are verified against the live database,
-not merely built. Two things are explicitly NOT verified: **the policy set has
-never been exercised as a non-Full identity**, and **the app itself has never
-been run against the database**. Both wait on auth users existing.
-
-## Security advisor state
-
-Run `get_advisors` after schema changes. As of handoff, everything it reports is
-understood:
-
-- **`app.code_counters` RLS enabled with no policy (INFO).** Intentional. It has
-  no grants either, so both layers deny independently.
-- **Seven SECURITY DEFINER functions callable by `authenticated` (WARN).** These
-  are the caller-facing RPCs and they have to live in `public` to be reachable
-  through PostgREST at all. Each gates internally. This warning is the expected
-  cost of that design, not a defect.
-- `app.calc_labor_total` had a mutable search_path; pinned in
-  `0011_pin_calc_labor_total_search_path.sql` and re-verified.
-- Two functions in a leftover `_try_sec` scratch schema. That schema is dropped;
-  no scratch schemas remain.
+- Reads are broad, writes are gated. Never filter a REFERENCED staff row by
+  status (Sofia Marchetti is Deactivated and owns clients/deals).
+- A policy is not a grant; check `role_table_grants` AND `column_privileges`.
+- Never run the Supabase CLI push command; a PreToolUse hook denies it.
+- The `0010_seed` parts pin `set search_path = public, extensions;` for
+  citext. Do not strip.
+- Run `9999_security_guard.sql` after any migration.
+- The Next dev-tools badge at 390px is not a layout bug; it does not exist in
+  production builds.
 
 ## Next steps, in order
 
-1. Export `SUPABASE_SECRET_KEY` and `SUPABASE_DB_URL`, then `npm run seed:auth`.
-   It must create **Elena Torres** (`elena.torres@example.com`, Dispatcher) as
-   the mandatory non-Full verification account. See "Why Elena" below.
-2. Turn auth on: rename `src/proxy.disabled.ts` to `src/proxy.ts` with the
-   `updateSession` implementation, wire `login-form.tsx` to `signIn` from
-   `src/server/auth-actions.ts`, and gate `dashboard/layout.tsx` on
-   `requireAuth()`.
-3. Convert Clients first. It has the fewest dependencies and a working query
-   module. Then Deals.
-4. Build the quote builder on a new `sales/[id]` route.
-5. Then Warehouse, Calendar, Documents, Settings.
-6. Dashboard KPI cards last: several are currently hardcoded literals and become
-   real aggregate queries.
-
-## Rules that are load-bearing
-
-These were each learned the expensive way this session. Breaking any of them
-reintroduces a bug that has already been fixed once.
-
-**Reads are broad, writes are gated.** Every operational table is readable by
-any active staff member. The original design gated reads behind permission sets,
-which was measured to blank Sales for 16 of 27 staff and Documents for 20 of 27,
-and turn the dashboard revenue card to $0 for most of the company, with no error.
-The sidebar is a flat static array with no permission filtering and no screen has
-an access-denied state, so a gated read ships as a blank screen. The only read
-exception is `staff_profiles_sensitive` (date of birth, home address).
-
-**Never filter a REFERENCED staff row by status.** RLS gates the caller's
-status. Sofia Marchetti is Deactivated and is the account owner on five clients,
-owns three deals, and is an estimator of record. Any join requiring the
-referenced row to be active silently drops those rows.
-
-**A policy is not a grant.** Tables land owned by postgres with correct RLS and
-zero DML grants, presenting as `permission denied`. Verify with BOTH
-`information_schema.role_table_grants` and `information_schema.column_privileges`;
-column-level grants are invisible to the first. The `staff` UPDATE grants on
-`full_name` and `avatar_url` are column grants and are the intended design. A
-reviewer running only the first query concludes staff editing is broken, grants
-table-wide, and reopens a privilege escalation: a Driver setting their own
-`role_id` to Owner.
-
-**Never run the Supabase CLI push command.** A PreToolUse hook hard-denies any
-Bash command containing that phrase, including inside a heredoc writing
-documentation. Apply one file at a time.
-
-**The `0010_seed` parts each pin `set search_path = public, extensions;`.** Off
-the search path a bare citext `=` silently degrades to case-sensitive
-`text = text` and email joins match zero rows with no error. Do not strip those
-lines.
-
-**Bash cwd persists between calls.** A stale `cd` sent a `-f` path lookup into
-the wrong directory this session. Prefix risky commands with an absolute path.
-
-**Applying migrations via Bash is blocked** by the auto-mode classifier, but the
-`mcp__claude_ai_Supabase__apply_migration` tool works. Use the MCP tool.
-
-## Why Elena
-
-`rootUser` is Morgan Ellis, reconciled as an Admin, and Admin is
-`access_level = 'Full'`, which short-circuits every permission check. Anyone
-testing as Morgan sees every screen work perfectly whether the policies are
-right or wrong. Elena Torres is a Dispatcher holding dispatch, jobs, fleet,
-clients and calendar, which is exactly the set that exposes every gap. Exercise
-the policies as her before calling anything done.
-
-## How to check the seed
-
-Expected, all measured in a throwaway schema before this was applied:
-
-- Booked revenue over Won deals = **21100.00**. Both Won deals seed at
-  `estimated_value` 0.00, so this figure can only exist if the quote-acceptance
-  write-back trigger fired. It is a live end-to-end test, not a stored constant.
-- staff 27, clients 25, deals 15, vaults 14, storage agreements 6, calendar
-  events 21, documents 15, document folders 6, roles 9, permission sets 16.
-- Role membership summed over all staff = 27; over only the original 25 UserRow
-  emails = 25. Both readings are correct.
-- Vaults: capacity 7900, occupied 4110, ratio 52%. V-206 `occupancy_percent` =
-  110, which is deliberate over-capacity, not corrupt data.
-- Clients by status: Active 10, In Storage 4, Lead 4, Past 4, Inactive 3.
-- Labor math: crew 4 at $75, 3h minimum, 8h overtime threshold, 1.5x gives 900
-  at 2h, 1500 at 5h, 3300 at 10h. The figures written in the design JSON are
-  each 0.65x wrong; these are the measured ones.
-
-Run `9999_security_guard.sql` after any migration. It raises on deviation and
-has been broken on purpose 15 different ways to confirm each check fires.
-
-## Known follow-ups
-
-- **`company_billing_profile` broad read exposes `routing_number`.** A
-  Dispatcher can read the company bank routing number. Gating the whole table
-  recreates the blank-invoice-header failure, so the fix is to split the banking
-  columns into their own table, mirroring the `staff_profiles` /
-  `staff_profiles_sensitive` split that is already the house pattern. Written up
-  as D21 in the decisions file.
-- **Mobile.** Joey requires this app to work on phones. A measured 390px audit
-  fixed the app-shell defects (card header overflow, pipeline touch-drag,
-  sidebar trigger target, palette zoom, account switcher focus). Still open: the
-  invoice paper preview renders at 35.8% scale making body text 5px, the
-  calendar wastes 281px of viewport while truncating events to four characters,
-  and six wide tables scroll with no discoverable affordance. Documents is the
-  reference pattern for that last one; it hides secondary columns below `md` and
-  measures zero hidden pixels.
-- The reported "sidebar footer overlaps content at 390px" was measured and
-  **refuted**. It is the Next.js dev-tools badge, which does not exist in a
-  production build. Do not spend time on it.
-
-## Where the reasoning lives
-
-`/private/tmp/claude-501/-Users-joeychilds-movers-app/d5070f9e-7972-46d9-bc03-c1900bc11b13/scratchpad/design/`
-holds the full design record: three domain schema designs, the security design,
-three adversarial verification reports, the file-storage and Supabase-auth
-research briefs, and `DECISIONS.md`, which is the binding resolution of all 28
-defects the verifiers found. That directory is temporary. If any of it matters
-beyond this week, copy it into the repo.
-
-The plan file is `~/.claude/plans/agile-zooming-blossom.md`.
+1. Convert Warehouse (both tabs as one unit; `vaults-columns.tsx` still
+   imports `storageCustomers` by value, replaced by `vaults_expanded`'s
+   pre-joined columns).
+2. Convert Calendar (prop contract changes: uniform `CalendarEvent[]`, ISO
+   strings, office events gain ids).
+3. Documents: run `seed-documents.ts`, then convert the screen.
+4. Settings: users/roles from `staff` + `roles_expanded`; wire the admin_*
+   RPCs that already exist.
+5. Make or remove the inert chrome buttons per screen as each converts.

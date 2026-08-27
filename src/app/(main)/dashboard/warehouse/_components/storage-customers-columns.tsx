@@ -41,9 +41,9 @@ export const storageCustomersColumns: ColumnDef<DataTableFeatures, StorageCustom
     accessorKey: "customerName",
     header: "Customer",
     cell: ({ row }) => (
-      <div className="min-w-0">
+      <div className="min-w-0 max-w-36 sm:max-w-none">
         <Link
-          className="truncate font-medium text-foreground text-sm hover:underline"
+          className="block truncate font-medium text-foreground text-sm hover:underline"
           href={`/dashboard/clients/${row.original.clientId}`}
         >
           {row.original.customerName}
@@ -128,7 +128,6 @@ export const storageCustomersColumns: ColumnDef<DataTableFeatures, StorageCustom
         </DropdownMenu>
       </div>
     ),
-    enableHiding: false,
     enableSorting: false,
   },
 ];

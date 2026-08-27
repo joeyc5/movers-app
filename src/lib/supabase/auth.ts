@@ -58,10 +58,15 @@ export const getCurrentStaff = cache(async () => {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("staff")
-    .select("id, code:id, full_name, work_email, team, status, avatar_url, role_id")
+    .select(
+      "id, code:id, full_name, work_email, team, status, avatar_url, role_id, role:role_id ( name, access_level )",
+    )
     .eq("auth_user_id", authUserId)
     .maybeSingle();
 
-  if (error) return null;
-  return data;
+  if (error || !data) return null;
+
+  // PostgREST types a to-one embed as object-or-array; normalise once here.
+  const role = Array.isArray(data.role) ? (data.role[0] ?? null) : data.role;
+  return { ...data, role };
 });

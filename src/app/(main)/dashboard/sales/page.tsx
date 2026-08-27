@@ -1,9 +1,12 @@
-import { deals } from "./_components/data";
+import { getDeals, getPipelineBoard } from "@/server/queries/deals";
+
 import { KpiCards } from "./_components/kpi-cards";
 import { LeadFlow } from "./_components/lead-flow";
 import { SalesTabs } from "./_components/sales-tabs";
 
-export default function Page() {
+export default async function Page() {
+  const [deals, board] = await Promise.all([getDeals(), getPipelineBoard()]);
+
   return (
     <div className="flex flex-col gap-4 md:gap-6">
       <div className="flex flex-col gap-0.5">
@@ -11,9 +14,9 @@ export default function Page() {
         <p className="text-muted-foreground text-sm">Leads and deals from first call to booked move.</p>
       </div>
 
-      <KpiCards />
+      <KpiCards deals={deals} />
       <LeadFlow />
-      <SalesTabs deals={deals} />
+      <SalesTabs deals={deals} initialBoard={board} />
     </div>
   );
 }

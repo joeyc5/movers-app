@@ -10,6 +10,7 @@ import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle }
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { type DataTableFeatures, dataTableFeatures } from "@/lib/data-table-features";
 
 import { type Vault, vaultFilters } from "./data";
@@ -39,6 +40,19 @@ export function VaultsPanel({ vaults }: { vaults: Vault[] }) {
     group: false,
     warehouseLocation: false,
   });
+
+  // Same responsive rule as Documents: secondary columns leave below md
+  // instead of forcing the table into an undiscoverable horizontal scroll.
+  const isMobile = useIsMobile();
+  React.useEffect(() => {
+    setColumnVisibility((visibility) => ({
+      ...visibility,
+      capacity: !isMobile,
+      occupancy: !isMobile,
+      lastInspectionDate: !isMobile,
+      actions: !isMobile,
+    }));
+  }, [isMobile]);
 
   const table = useTable({
     features: dataTableFeatures,

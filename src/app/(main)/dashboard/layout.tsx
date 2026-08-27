@@ -1,20 +1,36 @@
 import type { ReactNode } from "react";
 
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 
 import { AppSidebar } from "@/app/(main)/dashboard/_components/sidebar/app-sidebar";
 import { Separator } from "@/components/ui/separator";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { users } from "@/data/users";
+import { getCurrentStaff, requireAuth } from "@/lib/supabase/auth";
 import { cn } from "@/lib/utils";
 import { getPreference } from "@/server/server-actions";
 
-import { AccountSwitcher } from "./_components/header/account-switcher";
+import { AccountMenu } from "./_components/header/account-menu";
 import { LayoutControls } from "./_components/header/layout-controls";
 import { SearchDialog } from "./_components/header/search-dialog";
 import { ThemeSwitcher } from "./_components/header/theme-switcher";
 
 export default async function Layout({ children }: Readonly<{ children: ReactNode }>) {
+  await requireAuth();
+
+  // Authenticated but unlinked to a staff row: signIn signs that state out
+  // before it lands here, so reaching it means the row was unlinked after
+  // login. Not an error page; it is "you do not belong in the dashboard".
+  const staff = await getCurrentStaff();
+  if (!staff) redirect("/unauthorized");
+
+  const user = {
+    name: staff.full_name,
+    email: String(staff.work_email),
+    avatar: staff.avatar_url ?? "",
+    role: staff.role?.name ?? staff.team,
+  };
+
   const cookieStore = await cookies();
   const defaultOpen = cookieStore.get("sidebar_state")?.value !== "false";
   const [variant, collapsible] = await Promise.all([
@@ -31,7 +47,7 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
         } as React.CSSProperties
       }
     >
-      <AppSidebar variant={variant} collapsible={collapsible} />
+      <AppSidebar variant={variant} collapsible={collapsible} user={user} />
       <SidebarInset
         className={cn(
           "[html[data-content-layout=centered]_&>*]:mx-auto",
@@ -61,12 +77,13 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
             <div className="flex items-center gap-2">
               <LayoutControls />
               <ThemeSwitcher />
-              <AccountSwitcher users={users} />
+              <AccountMenu user={user} />
             </div>
           </div>
         </header>
         {/* Pages can set data-content-padding="false" to render full-bleed app layouts. */}
-        <div className="min-h-0 min-w-0 flex-1 overflow-x-hidden p-4 has-data-[content-padding=false]:p-0 md:p-6 md:has-data-[content-padding=false]:p-0">
+        {/* overflow-x-clip, not -hidden: hidden creates a scroll container and silently kills position:sticky for every descendant. */}
+        <div className="min-h-0 min-w-0 flex-1 overflow-x-clip p-4 has-data-[content-padding=false]:p-0 md:p-6 md:has-data-[content-padding=false]:p-0">
           {children}
         </div>
       </SidebarInset>

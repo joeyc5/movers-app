@@ -1,9 +1,6 @@
-import Link from "next/link";
-
 import { Command } from "lucide-react";
 
 import { LoginForm } from "../../_components/login-form";
-import { GoogleButton } from "../../_components/social-auth/google-button";
 
 export default function LoginV1() {
   return (
@@ -24,18 +21,12 @@ export default function LoginV1() {
         <div className="w-full max-w-md space-y-10 py-24 lg:py-32">
           <div className="space-y-4 text-center">
             <div className="font-medium tracking-tight">Login</div>
-            <div className="mx-auto max-w-xl text-muted-foreground">
-              Welcome back. Enter your email and password, let&apos;s hope you remember them this time.
-            </div>
+            <div className="mx-auto max-w-xl text-muted-foreground">Sign in with your work email.</div>
           </div>
           <div className="space-y-4">
             <LoginForm />
-            <GoogleButton className="w-full" variant="outline" />
             <p className="text-center text-muted-foreground text-xs">
-              Don&apos;t have an account?{" "}
-              <Link prefetch={false} href="register" className="text-primary">
-                Register
-              </Link>
+              Accounts are created by an administrator. Ask yours if you need one.
             </p>
           </div>
         </div>

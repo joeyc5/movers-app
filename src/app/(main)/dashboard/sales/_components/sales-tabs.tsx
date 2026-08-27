@@ -2,11 +2,11 @@
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-import { buildBoard, type PipelineDeal } from "./data";
+import type { BoardState, PipelineDeal } from "./data";
 import { LeadsPanel } from "./leads/leads-panel";
 import { PipelineBoard } from "./pipeline/pipeline-board";
 
-export function SalesTabs({ deals }: { deals: PipelineDeal[] }) {
+export function SalesTabs({ deals, initialBoard }: { deals: PipelineDeal[]; initialBoard: BoardState }) {
   return (
     <Tabs defaultValue="pipeline">
       <TabsList variant="line">
@@ -15,7 +15,7 @@ export function SalesTabs({ deals }: { deals: PipelineDeal[] }) {
       </TabsList>
 
       <TabsContent className="pt-4" value="pipeline">
-        <PipelineBoard initialBoard={buildBoard(deals)} />
+        <PipelineBoard initialBoard={initialBoard} />
       </TabsContent>
 
       <TabsContent className="pt-4" value="leads">

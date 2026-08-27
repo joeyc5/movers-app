@@ -2,6 +2,8 @@
 
 import type * as React from "react";
 
+import Link from "next/link";
+
 import { format } from "date-fns";
 import {
   ArrowRight,
@@ -75,7 +77,11 @@ export function DealCard({
     >
       <div className="min-w-0 space-y-1.5">
         <div className="flex items-center justify-between gap-2">
-          <h3 className="min-w-0 truncate font-medium text-sm leading-none">{deal.clientName}</h3>
+          <h3 className="min-w-0 truncate font-medium text-sm leading-none">
+            <Link href={`/dashboard/sales/${deal.id}`} className="hover:underline">
+              {deal.clientName}
+            </Link>
+          </h3>
           <div className="flex shrink-0 items-center gap-1">
             <Badge
               variant={priorityBadgeConfig[deal.priority].variant}

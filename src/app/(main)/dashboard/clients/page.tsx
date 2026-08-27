@@ -1,7 +1,10 @@
-import { ClientsPanel } from "./_components/clients-panel";
-import { clients } from "./_components/data";
+import { getClients } from "@/server/queries/clients";
 
-export default function Page() {
+import { ClientsPanel } from "./_components/clients-panel";
+
+export default async function Page() {
+  const clients = await getClients();
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-0.5">
