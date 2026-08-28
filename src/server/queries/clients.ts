@@ -22,7 +22,7 @@ const CLIENT_COLUMNS = `
   origin_street, origin_city, origin_state, origin_zip,
   destination_street, destination_city, destination_state, destination_zip,
   created_date, last_activity_date, notes,
-  account_owner:account_owner_staff_id ( full_name )
+  account_owner:clients_account_owner_staff_id_fkey ( full_name )
 `;
 
 type StaffRef = { full_name: string } | { full_name: string }[] | null;

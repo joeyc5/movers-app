@@ -34,6 +34,14 @@ export const projectUrl = () => required("SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_U
 export const secretKey = () => required("SUPABASE_SECRET_KEY", "SUPABASE_SERVICE_ROLE_KEY");
 
 /**
+ * The publishable (anon) key. Safe to publish; it is the same value the
+ * browser ships. Scripts that need to act AS A SIGNED-IN USER -- exercising
+ * RLS rather than bypassing it -- use this plus a real email/password,
+ * never the secret key.
+ */
+export const publishableKey = () => required("SUPABASE_PUBLISHABLE_KEY", "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY");
+
+/**
  * A DIRECT Postgres connection string.
  *
  * Required rather than optional: dev_seed and app are not PostgREST-exposed

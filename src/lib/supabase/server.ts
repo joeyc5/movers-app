@@ -4,6 +4,8 @@ import { cookies } from "next/headers";
 
 import { createServerClient } from "@supabase/ssr";
 
+import type { Database } from "./database.types";
+
 /**
  * Server-side Supabase client, for Server Components, Server Actions and Route
  * Handlers. Reads the caller's session cookie, so every query runs as that
@@ -15,7 +17,7 @@ import { createServerClient } from "@supabase/ssr";
 export async function createClient() {
   const cookieStore = await cookies();
 
-  return createServerClient(
+  return createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL as string,
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY as string,
     {

@@ -3,13 +3,13 @@
 import { FormProvider, useForm, useWatch } from "react-hook-form";
 
 import type { Client } from "../../../_components/data";
-import { getDefaultInvoiceValues, type InvoiceFormValues } from "./data";
+import { getDefaultInvoiceValues, type InvoiceFormValues, type InvoiceFromDetails } from "./data";
 import { InvoiceForm } from "./invoice-form";
 import { InvoicePreview } from "./invoice-preview";
 
-export function Invoice({ client }: { client: Client }) {
+export function Invoice({ client, from }: { client: Client; from: InvoiceFromDetails }) {
   const form = useForm<InvoiceFormValues>({
-    defaultValues: getDefaultInvoiceValues(client),
+    defaultValues: getDefaultInvoiceValues(client, from),
   });
   const invoice = useWatch({ control: form.control }) as InvoiceFormValues;
 

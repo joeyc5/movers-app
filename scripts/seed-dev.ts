@@ -28,6 +28,12 @@
  *
  * Scoped on is_seed, never on a code prefix: real app-created events mint codes
  * in the same JOB-4xxx namespace, so a real JOB-4007 sits squarely inside it.
+ *
+ * dev_seed.reseed_calendar() took a mandatory third argument, p_company_id,
+ * once the seeded calendar became tenant-scoped (0017_definer_surface.sql).
+ * This script re-seeds Demo Movers' own seeded rows, so it resolves that
+ * company's id by slug rather than accepting one on the command line: there
+ * is exactly one company this script has ever had reason to touch.
  */
 
 import { Client } from "pg";
@@ -58,9 +64,18 @@ async function main() {
     }
     console.log(`Seeded events currently sit in: ${before.rows.map((r) => `${r.month} (${r.n})`).join(", ")}`);
 
-    const { rows } = await db.query<{ moved: number }>(`select dev_seed.reseed_calendar($1::date) as moved`, [
-      anchor ?? null,
-    ]);
+    const { rows: companyRows } = await db.query<{ id: string }>(
+      `select id from public.companies where slug = 'demo-movers'`,
+    );
+    if (companyRows.length === 0) {
+      throw new Error("Demo Movers company row not found. Apply supabase/migrations/0014_backfill.sql first.");
+    }
+    const companyId = companyRows[0].id;
+
+    const { rows } = await db.query<{ moved: number }>(
+      `select dev_seed.reseed_calendar($1::date, 'America/Los_Angeles', $2::uuid) as moved`,
+      [anchor ?? null, companyId],
+    );
     const moved = rows[0].moved;
 
     const after = await db.query<{ month: string; n: string }>(

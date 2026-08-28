@@ -50,6 +50,14 @@ export const requireAuth = cache(async () => {
  * a real state, not an error: staff rows pre-exist their auth users and are
  * claimed on first login. Callers decide whether that means "onboard me" or
  * "you do not belong here".
+ *
+ * 0015 dropped `staff_auth_user_id_key`, so "one row per auth user" is now
+ * an RLS-derived guarantee rather than a structural one. `.maybeSingle()`
+ * returns { data: null, error: null } for zero rows — legitimate, "not
+ * staff anywhere" — but a real query error (including PGRST116 for an
+ * unexpected multi-row match) must not be folded into that same silent
+ * null. This repo names silent-zero-rows as its hardest symptom to
+ * diagnose, so an actual error is logged with enough detail to identify it.
  */
 export const getCurrentStaff = cache(async () => {
   const authUserId = await getAuthUserId();
@@ -59,14 +67,70 @@ export const getCurrentStaff = cache(async () => {
   const { data, error } = await supabase
     .from("staff")
     .select(
-      "id, code:id, full_name, work_email, team, status, avatar_url, role_id, role:role_id ( name, access_level )",
+      "id, code:id, full_name, work_email, team, status, avatar_url, role_id, company_id, role:staff_role_id_fkey ( name, access_level )",
     )
     .eq("auth_user_id", authUserId)
     .maybeSingle();
 
-  if (error || !data) return null;
+  if (error) {
+    console.error("getCurrentStaff: staff lookup failed", {
+      authUserId,
+      code: error.code,
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+    });
+    return null;
+  }
+  if (!data) return null;
 
   // PostgREST types a to-one embed as object-or-array; normalise once here.
   const role = Array.isArray(data.role) ? (data.role[0] ?? null) : data.role;
   return { ...data, role };
+});
+
+export type CompanyState = {
+  state: "ok" | "revoked-selection" | "no-membership";
+  company_id: string | null;
+  company_name: string | null;
+};
+
+/**
+ * The signed-in staff member's resolved company, from
+ * public.current_company_state() (0012, folded to a single evaluation of
+ * app.current_company_id() per call in 0023). Membership is revalidated
+ * against `staff.status = 'Active'` on every call rather than read off a
+ * JWT claim, so a revoked membership is denied immediately, not at token
+ * expiry.
+ *
+ * `state` is load-bearing: `'revoked-selection'` means the caller's
+ * selected company no longer has them as Active staff and must never
+ * silently fall through to some other tenant; `'no-membership'` means
+ * they are not staff anywhere. Callers must route both non-'ok' states to
+ * /unauthorized rather than rendering a blank dashboard.
+ *
+ * The function always returns exactly one row, so unlike
+ * getCurrentStaff()'s `.maybeSingle()` above, there is no legitimate empty
+ * case here for `.single()` to hide — any error is a real failure and is
+ * logged rather than folded into a silent null. The generated RPC return
+ * type marks company_id/company_name as non-null, which is wrong for the
+ * revoked-selection and no-membership states; the cast below corrects it
+ * to what the SQL function actually returns.
+ */
+export const getCurrentCompany = cache(async () => {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("current_company_state").single();
+
+  if (error) {
+    console.error("getCurrentCompany: current_company_state failed", {
+      code: error.code,
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+    });
+    return null;
+  }
+  if (!data) return null;
+
+  return data as CompanyState;
 });

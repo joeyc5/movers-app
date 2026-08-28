@@ -17,8 +17,8 @@ const DEAL_COLUMNS = `
   id, code, client_id, client_name, stage, priority,
   estimated_value, estimated_value_source, accepted_quote_id,
   move_date, origin_city, destination_city, board_position,
-  client:client_id ( code ),
-  owner:owner_staff_id ( full_name )
+  client:deals_client_id_fkey ( code ),
+  owner:deals_owner_staff_id_fkey ( full_name )
 `;
 
 type Ref<T> = T | T[] | null;

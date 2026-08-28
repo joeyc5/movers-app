@@ -8,15 +8,44 @@
  * never created. A metadata row with no object behind it is a dead end wearing
  * a filename.
  *
- * It also creates the bucket. The DDL migrations deliberately left the
- * storage.buckets row out, because the bucket's RLS policies belong with the
- * public.documents policies (the object SELECT policy mirrors the row one), and
- * neither is written yet. The bucket itself is not a policy, so it lands here.
- *
  *   npm run seed:documents
  *
- * Re-runnable: the bucket creation tolerates "already exists", the uploads are
- * upserts, and the metadata write targets documents_storage_path_key.
+ * Re-runnable: the uploads are upserts and the metadata write targets
+ * documents_storage_path_key.
+ *
+ * NO SECRET KEY, BY DESIGN (multi-tenancy Task 7). This used to sign in with
+ * the service_role key, which bypasses storage.objects RLS entirely -- fine
+ * for creating the bucket, wrong for proving the upload path actually works.
+ * 0018_storage_grants.sql added a company-prefix check to
+ * documents_object_insert; the only way to exercise that check is to upload
+ * AS A REAL SIGNED-IN USER, publishable key plus a password, so a bad prefix
+ * gets caught by the same policy a browser upload would hit. Provide:
+ *
+ *   SEED_UPLOAD_EMAIL=... SEED_UPLOAD_PASSWORD=... npm run seed:documents
+ *
+ * The password is demo filler for a fake company; it lives in the gitignored
+ * .env.local, never in a tracked file, a migration, or a commit message.
+ *
+ * A consequence of going through RLS: some rows may come back DENIED rather
+ * than uploaded, if the signed-in user lacks the permission that scope's
+ * insert branch requires (documents_object_insert, 0018) -- HR documents need
+ * has_perm('users', true) or to be the row's own staff folder, the shared
+ * shelf needs has_perm('documents', true). THAT IS A FINDING TO REPORT, not a
+ * bug in this script: it means the policy is doing its job. This script
+ * prints exactly which rows were denied and why, and keeps going -- one row
+ * refusing upload must never stop the other fourteen from getting bytes.
+ *
+ * There is also no bucket-creation step here anymore: creating a bucket is an
+ * admin action this key cannot perform, and the "documents" bucket already
+ * exists (created the first time this script ran, back when it still had a
+ * secret key). If it is ever missing, every upload below fails with a clear
+ * "Bucket not found", which is diagnosis enough to create it out of band.
+ *
+ * PATH CONVENTION (0018): {company_id}/{scope}/{id}/{document_id}-{slug}.ext.
+ * This script does not compute that path -- 0018_storage_grants.sql already
+ * repathed every public.documents.storage_path to the new convention as a
+ * data migration, so reading storage_path straight from the row (as this
+ * script always has) uploads to the right place with no logic change here.
  *
  * PLACEHOLDERS, STATED PLAINLY. The .pdf objects are real, minimal, one-page
  * PDFs that open. The .docx / .xlsx / .zip objects are valid empty ZIP
@@ -29,22 +58,14 @@
 import { createClient } from "@supabase/supabase-js";
 import { Client } from "pg";
 
-import { databaseUrl, projectUrl, secretKey } from "./seed-env";
+import { databaseUrl, projectUrl, publishableKey, required } from "./seed-env";
 
 const BUCKET = "documents";
 
-/** D18: 50 MB. The largest seeded fixture is a scanned bill of lading. */
-const FILE_SIZE_LIMIT = 52_428_800;
-
-const ALLOWED_MIME_TYPES = [
-  "application/pdf",
-  "application/zip",
-  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  "image/jpeg",
-  "image/png",
-  "text/csv",
-];
+// The bucket's file-size limit (50 MB) and allowed MIME types were set once,
+// at creation, with the secret key this script no longer holds (see the file
+// header). They live with the bucket now, not here; changing them is an
+// admin action, not a re-seed.
 
 interface DocumentRow {
   id: string;
@@ -94,29 +115,32 @@ function placeholderFor(row: DocumentRow): Uint8Array {
 }
 
 async function main() {
-  const storage = createClient(projectUrl(), secretKey(), {
+  const email = required("SEED_UPLOAD_EMAIL");
+  const password = required("SEED_UPLOAD_PASSWORD");
+
+  // Publishable key, not the secret key: uploads below run AS THIS SIGNED-IN
+  // USER, subject to documents_object_insert like any browser upload. See
+  // the file header for why that is the point, not a workaround.
+  const storage = createClient(projectUrl(), publishableKey(), {
     auth: { autoRefreshToken: false, persistSession: false },
   });
+
+  const { data: session, error: signInError } = await storage.auth.signInWithPassword({ email, password });
+  if (signInError || !session.user) {
+    throw new Error(`sign-in as ${email} failed: ${signInError?.message ?? "no user returned"}`);
+  }
+  console.log(`+ signed in as ${email} (${session.user.id})`);
 
   const db = new Client({ connectionString: databaseUrl() });
   await db.connect();
 
   try {
-    // 1. The bucket. PRIVATE: these are bills of lading and HR records, and a
-    //    public bucket would serve every one of them to an unauthenticated URL.
-    const { error: bucketError } = await storage.storage.createBucket(BUCKET, {
-      public: false,
-      fileSizeLimit: FILE_SIZE_LIMIT,
-      allowedMimeTypes: ALLOWED_MIME_TYPES,
-    });
-    if (bucketError && !/already exists/i.test(bucketError.message)) {
-      throw new Error(`createBucket(${BUCKET}) failed: ${bucketError.message}`);
-    }
-    console.log(bucketError ? `· bucket "${BUCKET}" already exists` : `+ bucket "${BUCKET}" created (private)`);
-
-    // 2. The rows. The DATABASE owns storage_path, not this script: the path
-    //    embeds the client / staff / deal uuid that only the migration knows,
-    //    so reading it back is the only way the two can agree.
+    // 1. The rows. The DATABASE owns storage_path, not this script: the path
+    //    embeds the company / client / staff / deal uuid that only the
+    //    migrations know, so reading it back is the only way the two can
+    //    agree. 0018_storage_grants.sql already repathed every row to the
+    //    {company_id}/{scope}/{id}/... convention, so this needs no path
+    //    computation of its own.
     const { rows } = await db.query<DocumentRow>(
       `select id, name, kind, storage_bucket, storage_path, mime_type,
               folder_id, owner_staff_id, client_id, deal_id, job_event_id, staff_id,
@@ -130,8 +154,12 @@ async function main() {
       throw new Error("No seeded documents found. Apply supabase/migrations/0010_seed.sql before running this script.");
     }
 
-    // 3. The bytes.
+    // 2. The bytes, one row at a time, denials collected rather than fatal.
+    //    A DENIED row means documents_object_insert refused this user for
+    //    that scope (most likely: not an HR admin, not a documents manager)
+    //    -- correct behaviour to report, not a reason to stop the other rows.
     let uploaded = 0;
+    const denied: { path: string; message: string }[] = [];
     for (const row of rows) {
       if (row.storage_bucket !== BUCKET) {
         console.warn(`! ${row.name} — bucket "${row.storage_bucket}" is not "${BUCKET}", skipped`);
@@ -143,7 +171,11 @@ async function main() {
         upsert: true,
       });
 
-      if (error) throw new Error(`upload(${row.storage_path}) failed: ${error.message}`);
+      if (error) {
+        denied.push({ path: row.storage_path, message: error.message });
+        console.warn(`  DENIED  ${row.storage_path}\n          ${error.message}`);
+        continue;
+      }
       uploaded += 1;
       console.log(`  ${row.storage_path}`);
     }
@@ -186,7 +218,13 @@ async function main() {
     );
 
     console.log(`\n${uploaded} placeholder object(s) uploaded and ${rows.length} metadata row(s) reconciled.`);
-    console.log("Downloads will now return bytes. Storage RLS policies are still to come.");
+    if (denied.length > 0) {
+      console.log(
+        `${denied.length} row(s) DENIED by documents_object_insert (as ${email}):\n` +
+          denied.map((d) => `  - ${d.path}`).join("\n") +
+          "\nThat is the policy working as designed for a user without the relevant permission, not a bug in this script.",
+      );
+    }
   } finally {
     await db.end();
   }

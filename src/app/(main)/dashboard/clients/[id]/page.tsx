@@ -1,10 +1,13 @@
 import { notFound } from "next/navigation";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { getCurrentStaff } from "@/lib/supabase/auth";
 import { getClientByCode } from "@/server/queries/clients";
+import { getCompanyBillingProfile } from "@/server/queries/company";
 
 import { ClientHeader } from "./_components/client-header";
 import { ClientOverview } from "./_components/client-overview";
+import { companyBillingProfileToInvoiceFrom } from "./_components/invoice/data";
 import { Invoice } from "./_components/invoice/invoice";
 
 interface PageProps {
@@ -13,11 +16,17 @@ interface PageProps {
 
 export default async function Page({ params }: PageProps) {
   const { id } = await params;
-  const client = await getClientByCode(id);
+  const [client, billingProfile, staff] = await Promise.all([
+    getClientByCode(id),
+    getCompanyBillingProfile(),
+    getCurrentStaff(),
+  ]);
 
   if (!client) {
     notFound();
   }
+
+  const invoiceFrom = companyBillingProfileToInvoiceFrom(billingProfile, staff?.full_name ?? "");
 
   return (
     <div className="flex flex-col gap-4">
@@ -39,7 +48,7 @@ export default async function Page({ params }: PageProps) {
         </TabsContent>
 
         <TabsContent className="px-4 py-4" value="invoices">
-          <Invoice client={client} />
+          <Invoice client={client} from={invoiceFrom} />
         </TabsContent>
       </Tabs>
     </div>

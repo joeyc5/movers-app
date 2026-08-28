@@ -1,5 +1,7 @@
 import { createBrowserClient } from "@supabase/ssr";
 
+import type { Database } from "./database.types";
+
 /**
  * Browser-side Supabase client.
  *
@@ -8,7 +10,7 @@ import { createBrowserClient } from "@supabase/ssr";
  * appear here or in any NEXT_PUBLIC_ variable.
  */
 export function createClient() {
-  return createBrowserClient(
+  return createBrowserClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL as string,
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY as string,
   );

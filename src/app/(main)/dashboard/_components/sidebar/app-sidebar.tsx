@@ -23,9 +23,16 @@ import { NavUser } from "./nav-user";
 
 export function AppSidebar({
   user,
+  companyName,
   ...props
 }: React.ComponentProps<typeof Sidebar> & {
   readonly user: { readonly name: string; readonly email: string; readonly avatar: string };
+  // The dashboard layout only reaches this component once
+  // current_company_state() reports 'ok', so this is null only in the
+  // data-inconsistency case of a company row missing after resolution.
+  // APP_CONFIG.name is a reasonable fallback there; it is not, and must
+  // not become, the everyday label -- that is the company name.
+  readonly companyName: string | null;
 }) {
   const { sidebarVariant, sidebarCollapsible, isSynced } = usePreferencesStore(
     useShallow((s) => ({
@@ -46,7 +53,7 @@ export function AppSidebar({
             <SidebarMenuButton asChild>
               <Link prefetch={false} href="/dashboard/default">
                 <Truck />
-                <span className="font-semibold text-base">{APP_CONFIG.name}</span>
+                <span className="font-semibold text-base">{companyName ?? APP_CONFIG.name}</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>

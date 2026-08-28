@@ -55,17 +55,55 @@ export interface InvoiceFormValues {
 
 const today = new Date();
 
-const movingCompanyFromDetails: InvoiceFromDetails = {
-  name: "Movers CRM",
-  email: "billing@example.com",
-  phone: "(510) 555-0100",
-  website: "",
-  addressLines: ["1250 Marina Village Pkwy", "Alameda, CA 94501"],
-  taxId: "EIN 68-0453921",
-  paymentAccountName: "Business Operating Account",
-  routingNumber: "071925363",
-  issuerName: "Morgan Ellis",
-};
+/** Shape of the columns read from public.company_billing_profile. */
+export interface CompanyBillingProfile {
+  name: string;
+  email: string;
+  phone: string;
+  website: string;
+  address_line1: string;
+  address_line2: string;
+  tax_id: string;
+  payment_account_name: string;
+  routing_number: string;
+}
+
+/**
+ * Maps the company's billing profile row to the invoice "From" shape.
+ * `profile` is null only when the lookup itself failed (see
+ * getCompanyBillingProfile); every provisioned company has exactly one
+ * row, so this renders blank fields rather than another tenant's data.
+ */
+export function companyBillingProfileToInvoiceFrom(
+  profile: CompanyBillingProfile | null,
+  issuerName: string,
+): InvoiceFromDetails {
+  if (!profile) {
+    return {
+      name: "",
+      email: "",
+      phone: "",
+      website: "",
+      addressLines: [],
+      taxId: "",
+      paymentAccountName: "",
+      routingNumber: "",
+      issuerName,
+    };
+  }
+
+  return {
+    name: profile.name,
+    email: profile.email,
+    phone: profile.phone,
+    website: profile.website,
+    addressLines: [profile.address_line1, profile.address_line2].filter(Boolean),
+    taxId: profile.tax_id,
+    paymentAccountName: profile.payment_account_name,
+    routingNumber: profile.routing_number,
+    issuerName,
+  };
+}
 
 export function clientToInvoiceDetails(client: Client): InvoiceToDetails {
   const { billingAddress } = client;
@@ -78,12 +116,12 @@ export function clientToInvoiceDetails(client: Client): InvoiceToDetails {
   };
 }
 
-export function getDefaultInvoiceValues(client: Client): InvoiceFormValues {
+export function getDefaultInvoiceValues(client: Client, from: InvoiceFromDetails): InvoiceFormValues {
   return {
     referenceNumber: `INV-${format(today, "yyyyMMdd")}`,
     issuedDate: format(today, "yyyy-MM-dd"),
     paymentDueDate: format(addDays(today, 14), "yyyy-MM-dd"),
-    from: movingCompanyFromDetails,
+    from,
     to: clientToInvoiceDetails(client),
     taxId: invoiceTaxOptions[0].id,
     discountType: "fixed",

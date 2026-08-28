@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 import { AppSidebar } from "@/app/(main)/dashboard/_components/sidebar/app-sidebar";
 import { Separator } from "@/components/ui/separator";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { getCurrentStaff, requireAuth } from "@/lib/supabase/auth";
+import { getCurrentCompany, getCurrentStaff, requireAuth } from "@/lib/supabase/auth";
 import { cn } from "@/lib/utils";
 import { getPreference } from "@/server/server-actions";
 
@@ -18,11 +18,23 @@ import { ThemeSwitcher } from "./_components/header/theme-switcher";
 export default async function Layout({ children }: Readonly<{ children: ReactNode }>) {
   await requireAuth();
 
-  // Authenticated but unlinked to a staff row: signIn signs that state out
-  // before it lands here, so reaching it means the row was unlinked after
-  // login. Not an error page; it is "you do not belong in the dashboard".
-  const staff = await getCurrentStaff();
-  if (!staff) redirect("/unauthorized");
+  // Authenticated but unlinked to a staff row, or resolved to a
+  // non-'ok' company state: signIn signs the fully-unlinked case out
+  // before it lands here, so reaching it means the row was unlinked, or
+  // the company membership was revoked/deactivated, after login. Not an
+  // error page; it is "you do not belong in the dashboard right now".
+  // 'revoked-selection' and 'no-membership' both deny by construction
+  // (see current_company_state()'s comment), so a selection that no
+  // longer matches an Active membership can never silently fall through
+  // to some other tenant. Any state that is not literally 'ok' -
+  // including one this code has never seen - is treated as a denial,
+  // never as permission to render the dashboard.
+  const [staff, company] = await Promise.all([getCurrentStaff(), getCurrentCompany()]);
+  if (!staff || !company || company.state !== "ok") {
+    const reason =
+      company?.state === "revoked-selection" || company?.state === "no-membership" ? company.state : undefined;
+    redirect(reason ? `/unauthorized?reason=${reason}` : "/unauthorized");
+  }
 
   const user = {
     name: staff.full_name,
@@ -47,7 +59,7 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
         } as React.CSSProperties
       }
     >
-      <AppSidebar variant={variant} collapsible={collapsible} user={user} />
+      <AppSidebar variant={variant} collapsible={collapsible} user={user} companyName={company.company_name} />
       <SidebarInset
         className={cn(
           "[html[data-content-layout=centered]_&>*]:mx-auto",
