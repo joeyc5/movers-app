@@ -333,3 +333,97 @@ begin
 
   raise notice 'tenancy guard: all 8 checks passed.';
 end $$;
+
+
+-- =====================================================================
+-- BREAK IT ON PURPOSE. One statement per check, each of which MUST make
+-- the block above raise (or, for #3, must make the SEMANTIC half in
+-- Task 10's supabase/tests/verify-isolation.sql raise instead -- see
+-- its own note). Run one, run the guard, watch it fire, undo it, run
+-- the guard again and watch it pass. A guard nobody has seen fail is a
+-- guard with an unknown hole.
+--
+-- All six were run against this project (task-10-11-report.md has the
+-- full transcript). Every check number below is what ACTUALLY fired,
+-- confirmed empirically -- not assumed from reading the SQL. Two
+-- differ from the brief that specified this task: the canonical-policy
+-- check is CHECK 6 here, not 4, and the unique-index check is CHECK 4,
+-- not 3, because a corrective provisioning migration took the 0020
+-- slot this file would otherwise have had, shifting nothing in this
+-- file's own numbering but apparently not in whoever wrote the brief's
+-- memory of it either.
+--
+--  1  drop policy tenant_isolation on public.deals;
+--     FIRES: CHECK 6 (missing canonical tenant policy) here, AND the
+--     partition sum in verify-isolation.sql for public.deals (measured:
+--     a Third Co identity, zero deals of its own, could suddenly count
+--     all 15 of Demo's). deals_select's own permissive policy
+--     (`using (is_active_staff())`) does not reference the ROW at all,
+--     so with the restrictive policy gone there is nothing left to
+--     stop it -- exactly the "using (true)"-shaped hole this guard's
+--     own header warns it cannot see by itself.
+--     undo: create policy tenant_isolation on public.deals as
+--       restrictive for all to public
+--       using (company_id = (select app.current_company_id()))
+--       with check (company_id = (select app.current_company_id()));
+--
+--  2  as postgres (standing in for service_role -- see the file header
+--     and the global note on why that substitution is equivalent):
+--     update public.deals set company_id = '<svm>' where id = '<any demo deal>';
+--     FIRES: 23514, raised by app.tg_company_id_immutable(). The
+--     statement never succeeds, so there is nothing to undo.
+--
+--  3  create an orphan. A random uuid cannot be used directly: the FK
+--     to companies (CHECK 2) rejects it before anything else can be
+--     observed. Instead:
+--       insert into public.companies (slug, name, status)
+--         values ('orphan-co', 'Orphan Co (scratch)', 'Active');
+--       insert into public.deals (company_id, code, client_name)
+--         values ('<orphan-co id>', 'DEAL-8888888', 'Break Test Orphan Deal');
+--     FIRES: nothing in THIS file. Checks 1, 2, 6, and 7 all stayed
+--     green (measured) -- the orphan row has a real, valid company_id,
+--     a real FK target, the canonical policy, and a working trigger; it
+--     is structurally indistinguishable from a legitimate row. What
+--     fires is the SUM half of Task 10's partition test: ground truth
+--     for public.deals read total=16, demo=15, svm=0, thirdco=0, an
+--     unaccounted remainder of 1. This is the exact case 0021's own
+--     header names as the reason Task 10 exists at all, reproduced on
+--     purpose. This break is the one place this task instructs you to
+--     look for a check that does NOT fire -- and none of 0021's checks
+--     did, by design; only the partition test catches it.
+--     undo: delete from public.deals where code = 'DEAL-8888888';
+--           delete from public.companies where slug = 'orphan-co';
+--
+--  4  insert into public.quote_line_items (company_id, quote_id, kind, description)
+--       values ('<svm>', '<a demo quote id>', 'accessorial', 'Break Test Cross FK');
+--     FIRES: 23503 on quote_line_items_quote_id_fkey (company_id,
+--     quote_id) -> quotes(company_id, id). Never succeeds; nothing to
+--     undo.
+--
+--  5  as a Demo Active identity holding `users` (Morgan Ellis or Grace
+--     Chen -- no fixture needed):
+--       select public.admin_set_staff_status('<svm staff uuid>', 'Deactivated');
+--     FIRES: 22023 "no such staff member: <uuid>" -- confirms Task 6's
+--     fix holds: the target is resolved within the caller's OWN
+--     company, so a foreign uuid answers not-found rather than leaking
+--     across the tenant wall or succeeding outright. Never succeeds;
+--     nothing to undo.
+--
+--  6  alter table public.clients
+--       drop constraint clients_company_code_key,
+--       add constraint clients_code_key unique (code);
+--     FIRES: CHECK 4 (unique index missing company_id: clients_code_key).
+--     CHECK 5 stays green -- clients_company_id_key (company_id, id)
+--     is a second, untouched company-scoped unique constraint on the
+--     same table, so "at least one" is still satisfied. Both outcomes
+--     were confirmed, not assumed.
+--     undo: alter table public.clients
+--       drop constraint clients_code_key,
+--       add constraint clients_company_code_key unique (company_id, code);
+--
+-- All six were restored and both this guard and 9999_security_guard.sql
+-- were re-run clean afterward. The database was left exactly as found
+-- plus Third Co (select public.create_company('Third Co','third-co',
+-- 'third@test.invalid','Third Owner')), which Task 10 needed and which
+-- this project's working agreement keeps on purpose.
+-- =====================================================================
