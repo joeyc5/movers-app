@@ -16,4 +16,13 @@ what is still static, and the landmines already fixed.
 - Mobile verification: chrome-devtools `emulate` with `390x844x2,mobile,touch`.
   `resize_page` cannot go below about 500px and lies about 390.
 - `npm run dev`, `npm run build`, and `git push` need the Bash sandbox
-  disabled here (port bind EPERM, stalled build, SSH broken pipe).
+  disabled here (port bind EPERM, stalled build, SSH broken pipe). So does
+  every `supabase` CLI call: sandboxed it dies on `EPERM` writing
+  `~/.supabase/telemetry.json.tmp.*` behind a stack trace that looks like
+  anything but a permissions problem. The CLI is logged in and
+  `supabase gen types` works; only `supabase projects api-keys` is refused,
+  by the classifier.
+- Nothing here needs the secret key. To exercise RLS as a given user, call
+  `set local role authenticated` and `set_config('request.jwt.claims', ...)`
+  inside a `pg_temp` function via the MCP, and return a table: `raise notice`
+  output never comes back through `execute_sql`.
