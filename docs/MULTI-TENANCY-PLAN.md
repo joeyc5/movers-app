@@ -255,6 +255,56 @@ the constraint-name form `client:deals_client_id_fkey ( code )` in
 `src/server/queries/deals.ts:20` and the ~4 other call sites with the same
 pattern, in the same commit as the constraint swap.
 
+#### Re-run after Task 4 -- CONFIRMED BROKEN for composite FKs, fixed
+
+`deals_client_id_fkey` is composite now: `{company_id,client_id}`. Re-ran the
+identical request as Elena Torres (Dispatcher, Scoped), plus the column-name
+and constraint-name forms side by side per site, so a stale PostgREST schema
+cache couldn't be mistaken for "no change needed" (a single 200 doesn't prove
+that; both forms returning 200 would have meant "retest after a cache
+reload," not "nothing to do").
+
+```
+GET /rest/v1/deals?select=code,client:client_id(code)&limit=1
+-> 400 PGRST200 "Could not find a relationship between 'deals' and
+   'client_id' in the schema cache"
+
+GET /rest/v1/deals?select=code,client:deals_client_id_fkey(code)&limit=1
+-> 200 [{"code":"DEAL-3015","client":{"code":"CLT-1014"}}]
+```
+
+Column-name form broke, constraint-name form resolved cleanly on the first
+try (no cache-reload retest needed). Checked all 5 candidate call sites the
+same way, both forms, not just the one baseline query:
+
+| Site | FK touched by 0015? | column-name | constraint-name | Action |
+|---|---|---|---|---|
+| `deals.ts:20` `client:client_id` | yes, composite | 400 PGRST200 | 200 | changed to `client:deals_client_id_fkey` |
+| `deals.ts:21` `owner:owner_staff_id` | yes, composite | 400 PGRST200 | 200 | changed to `owner:deals_owner_staff_id_fkey` |
+| `clients.ts:25` `account_owner:account_owner_staff_id` | yes, composite | 400 PGRST200 | 200 | changed to `account_owner:clients_account_owner_staff_id_fkey` |
+| `auth.ts:62` `role:role_id` | yes, composite | 400 PGRST200 | 200 | changed to `role:staff_role_id_fkey` |
+| `quotes.ts:323` `permission_set:permission_set_id!inner` | **no** -- `role_permission_sets.permission_set_id -> permission_sets(id)` is the deliberate global-catalog exemption, left single-column | 200 | 200 | **left unchanged** |
+
+4 of the "roughly 5" sites needed the fix; the 5th didn't, and testing it
+directly (rather than changing it on the assumption that "roughly 5" meant
+"all 5") confirmed why: its FK was never touched. Changing it anyway would
+have been safe (constraint-name hints work for single-column FKs too) but
+would have asserted a reason that doesn't exist, on the query that also
+gates write affordances for every Scoped user (`canWriteQuotes`) -- exactly
+the kind of change that should be evidence-led, not pattern-completed.
+
+`auth.ts:62` (`getCurrentStaff()`) is the highest-stakes of the four: it
+does `if (error || !data) return null`, so a broken `role:role_id` hint
+would have made every authenticated caller read as having no staff row at
+all -- indistinguishable from the "zero rows, no error" failure mode
+9999's own footer names as the hardest symptom in this system. Verified
+fixed, as Elena Torres: `role:staff_role_id_fkey ( name, access_level )`
+returns `{"name":"Dispatcher","access_level":"Scoped"}` for her row.
+
+All three fixed application call sites were re-verified against their full,
+real `SELECT` shape (not just the isolated embed clause) over HTTP as Elena
+Torres, and separately behind a green `npm run build`.
+
 ### Policy shape
 
 ```sql

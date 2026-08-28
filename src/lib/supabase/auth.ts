@@ -59,7 +59,7 @@ export const getCurrentStaff = cache(async () => {
   const { data, error } = await supabase
     .from("staff")
     .select(
-      "id, code:id, full_name, work_email, team, status, avatar_url, role_id, role:role_id ( name, access_level )",
+      "id, code:id, full_name, work_email, team, status, avatar_url, role_id, role:staff_role_id_fkey ( name, access_level )",
     )
     .eq("auth_user_id", authUserId)
     .maybeSingle();
