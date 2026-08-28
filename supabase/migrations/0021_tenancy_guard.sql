@@ -46,9 +46,17 @@
 -- the gap the plan missed"). Section B does not exempt this table; it is
 -- covered like the other 25, and this trigger is what makes it pass.
 -- =====================================================================
-create trigger trg_company_billing_profile_company_immutable
-  before update on public.company_billing_profile
-  for each row execute function app.tg_company_id_immutable();
+do $section_a$ begin
+  if not exists (
+    select 1 from pg_trigger
+     where tgname = 'trg_company_billing_profile_company_immutable'
+       and tgrelid = 'public.company_billing_profile'::regclass
+  ) then
+    create trigger trg_company_billing_profile_company_immutable
+      before update on public.company_billing_profile
+      for each row execute function app.tg_company_id_immutable();
+  end if;
+end $section_a$;
 
 -- =====================================================================
 -- Section B: the assertions.

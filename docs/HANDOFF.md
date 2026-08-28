@@ -23,9 +23,12 @@ Valley Moving & Storage's account, which is real and empty.
 A company (`public.companies`) is the top-level container. Every business
 table carries a `company_id`, and cross-company access is impossible by
 construction, not by convention. This was built across migrations
-`0012` through `0023` plus `9999_security_guard.sql`. Concretely, every one
-of the 26 company-scoped tables (25 in `public`, plus `app.code_counters`)
-has all five of:
+`0012` through `0023` plus `9999_security_guard.sql`. Concretely, 25 of those 26
+tables (the 25 in `public`) have all five of the following. `app.code_counters`
+has the first four but not the fifth: it has no RLS policies at all, by
+design, because `authenticated` holds zero grants on it and it is written
+only by the SECURITY DEFINER code minters. Both layers deny, which is
+stronger than a RESTRICTIVE policy:
 
 - **`NOT NULL company_id`**, with a foreign key pinning it to a real row in
   `public.companies`.
@@ -38,9 +41,9 @@ has all five of:
   human-facing code without colliding.
 - **Exactly one RESTRICTIVE `tenant_isolation` policy**, `using (company_id =
   (select app.current_company_id()))`, layered underneath the existing
-  permissive policies rather than folded into them. 25 of these are live
-  right now. RESTRICTIVE means both this policy AND the older permissive one
-  must allow a row; the older policies were never hand-edited.
+  permissive policies rather than folded into them. RESTRICTIVE means both
+  this policy AND the older permissive one must allow a row; the older
+  policies were never hand-edited.
 - **An immutability trigger** (`app.tg_company_id_immutable()`) that blocks
   any `UPDATE` from moving a row to a different company. This is the one
   piece of enforcement that does not rely on RLS: `service_role` bypasses
@@ -97,7 +100,7 @@ how to re-run this class of proof.
 | Company | Slug | State |
 |---|---|---|
 | Demo Movers | `demo-movers` | Populated with the original filler dataset (25 clients, 15 deals, 21 calendar events, and so on). Existing demo sign-ins (Elena Torres, Morgan Ellis, Grace Chen) live here. |
-| Silicon Valley Moving & Storage | `svm` | Real tenant, real business. Its only staff row (Owner, Joey Childs, `joey@siliconvalleymoving.com`) is `'Pending invite'` with no `auth_user_id`: nobody has signed in yet. Every list will read empty on first sign-in; that is correct, not a bug. |
+| Silicon Valley Moving & Storage | `svm` | Real tenant, real business. The Owner (Joey Childs, `joey@siliconvalleymoving.com`) has signed in and claimed the staff row; every other list reads empty because no business data has been entered yet. |
 | Third Co | `third-co` | A thin, permanent fixture company (one Owner, reference data only) that exists so the isolation suite has a third, independent tenant. With only two companies, a leak from one into the other can still balance a row-count check by coincidence; a third makes that arithmetically impossible to hide. Keep it. |
 
 ## Verifying tenancy
@@ -157,30 +160,19 @@ correctly reported as vacuous rather than a false PASS), 3 excluded-table,
 
 ## The SVM owner account
 
-`scripts/seed-svm-owner.ts` creates the one real credential this tenant
-needs: an `auth.users` row for `joey@siliconvalleymoving.com`, reading the
-password from `SVM_OWNER_PASSWORD` in the environment. It does not touch
-`public.staff`. The staff row is already there (`'Pending invite'`, no
-`auth_user_id`, seeded by `create_company()`); signing in for the first time
-is what claims it, because `signIn()` calls
-`claim_staff_for_current_user()` on every successful password sign-in.
+The auth credential for `joey@siliconvalleymoving.com` was created through
+the Supabase Auth dashboard (not `scripts/seed-svm-owner.ts`). The first
+sign-in ran `claim_staff_for_current_user()`, which bound the auth user to
+the pre-existing staff row and flipped it from `'Pending invite'` to
+`'Active'`. The Owner is now live.
 
-Like every seed script here, it needs `SUPABASE_SECRET_KEY` and
-`SUPABASE_DB_URL` exported in the shell that runs it, in addition to
-`SVM_OWNER_PASSWORD` (minimum 12 characters, never defaulted):
+`scripts/seed-svm-owner.ts` still exists as a reference for creating
+additional auth credentials the same way. It reads `SVM_OWNER_PASSWORD` from
+the environment, needs `SUPABASE_SECRET_KEY` and `SUPABASE_DB_URL`, and has
+not been run.
 
-```
-SVM_OWNER_PASSWORD='...' SUPABASE_SECRET_KEY=... SUPABASE_DB_URL=... \
-  npm run seed:svm-owner
-```
-
-Neither `SUPABASE_SECRET_KEY` nor `SUPABASE_DB_URL` is available in this
-environment (see "Rules that are load-bearing"), so this script is written
-and type-checked but has not been run. The user runs it themselves.
-
-**Rotate this password after first sign-in.** It was shared in a chat
-transcript during this work, which means it must be treated as compromised
-the moment it existed there, regardless of who has actually seen it.
+**Rotate the password.** It was shared in a chat transcript during the
+multi-tenancy build and should be treated as compromised.
 
 ## What remains unverified
 

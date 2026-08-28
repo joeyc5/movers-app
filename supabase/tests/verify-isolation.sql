@@ -41,13 +41,12 @@
 -- behind. Nothing else this script touches is permanent -- see next.
 --
 -- SIDE EFFECTS: NONE. Every fixture this script needs beyond Third Co
--- (a temporary claim of SVM's real Owner so SVM has an impersonable
--- caller, a dual-membership tester built by direct DML because the
--- claim RPC no longer allows a second membership through the product
--- path, and a zero-membership tester) is created INSIDE the one
--- transaction below and the transaction ends in ROLLBACK. Nothing
--- written here survives the script. Demo Movers, SVM, and Third Co's
--- pre-existing data are read-only throughout except for two
+-- is created or reused INSIDE the one transaction below and the
+-- transaction ends in ROLLBACK. If SVM's Owner has already signed in
+-- (the live account exists in auth.users and the staff row is Active),
+-- the script reuses that identity instead of inserting a new one.
+-- Nothing written here survives the script. Demo Movers, SVM, and
+-- Third Co's pre-existing data are read-only throughout except for two
 -- deliberate, asserted-then-rolled-back writes (assertions 2 and 3
 -- below), which is why they too live inside the same transaction.
 --
@@ -119,9 +118,10 @@ declare
   -- Third Co persona: the permanent Owner fixture created outside this
   -- script (see header).
   v_third_uid uuid := '3d1bd6b5-0c25-4c73-a101-3f0e7685bf34';
-  -- SVM persona: SVM's real Owner (Joey Childs), temporarily claimed
-  -- for this transaction only. Rolled back at the end, restoring him
-  -- to Pending invite / unclaimed exactly as found.
+  -- SVM persona: SVM's real Owner (Joey Childs). If an auth user
+  -- for joey@siliconvalleymoving.com already exists (the live account),
+  -- reuse it; otherwise create a transient fixture row. Either way the
+  -- whole transaction rolls back, so nothing persists.
   v_svm_uid   uuid;
   v_joey_staff_id uuid := 'ebb4b433-940c-4a6a-b367-110fe5751691';
 
@@ -165,28 +165,47 @@ begin
   -- FIXTURE SETUP (all rolled back with the rest of this transaction)
   -- ===================================================================
 
-  -- SVM impersonation target: claim Joey Childs' real, pre-existing
-  -- Pending-invite staff row for real, through the actual RPC, so this
-  -- also doubles as a live regression check on 0022's claim fix.
-  insert into auth.users (
-    instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
-    confirmation_token, recovery_token, email_change_token_new, email_change,
-    raw_app_meta_data, raw_user_meta_data, is_super_admin, created_at, updated_at,
-    is_sso_user, is_anonymous
-  ) values (
-    '00000000-0000-0000-0000-000000000000', gen_random_uuid(), 'authenticated', 'authenticated',
-    'joey@siliconvalleymoving.com', '', now(), '', '', '', '',
-    '{"provider":"email","providers":["email"]}'::jsonb,
-    '{"seeded":true,"fixture":true,"note":"verify-isolation.sql transient impersonation target, rolled back"}'::jsonb,
-    null, now(), now(), false, false
-  ) returning id into v_svm_uid;
+  -- SVM impersonation target: reuse the live auth user if one exists
+  -- for joey@siliconvalleymoving.com (the real account), otherwise
+  -- create a transient fixture row. Then claim the staff row only if
+  -- it is still unclaimed (0022 blocks a second membership, so calling
+  -- the claim RPC on an already-Active owner would fail).
+  select id into v_svm_uid
+    from auth.users
+   where email = 'joey@siliconvalleymoving.com'
+   limit 1;
 
-  execute 'set local role authenticated';
-  perform set_config('request.jwt.claims',
-    json_build_object('sub', v_svm_uid, 'role', 'authenticated')::text, true);
-  perform public.claim_staff_for_current_user();
-  execute 'reset role';
-  perform set_config('request.jwt.claims', '', true);
+  if v_svm_uid is null then
+    insert into auth.users (
+      instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
+      confirmation_token, recovery_token, email_change_token_new, email_change,
+      raw_app_meta_data, raw_user_meta_data, is_super_admin, created_at, updated_at,
+      is_sso_user, is_anonymous
+    ) values (
+      '00000000-0000-0000-0000-000000000000', gen_random_uuid(), 'authenticated', 'authenticated',
+      'joey@siliconvalleymoving.com', '', now(), '', '', '', '',
+      '{"provider":"email","providers":["email"]}'::jsonb,
+      '{"seeded":true,"fixture":true,"note":"verify-isolation.sql transient impersonation target, rolled back"}'::jsonb,
+      null, now(), now(), false, false
+    ) returning id into v_svm_uid;
+  end if;
+
+  if not exists (
+    select 1 from public.staff
+     where id = v_joey_staff_id
+       and auth_user_id is not null
+       and status = 'Active'
+  ) then
+    execute 'set local role authenticated';
+    perform set_config('request.jwt.claims',
+      json_build_object('sub', v_svm_uid, 'role', 'authenticated')::text, true);
+    perform public.claim_staff_for_current_user();
+    execute 'reset role';
+    perform set_config('request.jwt.claims', '', true);
+  else
+    select auth_user_id into v_svm_uid
+      from public.staff where id = v_joey_staff_id;
+  end if;
 
   insert into pg_temp.results (section, check_name, status, detail)
   select 'harness', 'svm persona claimed', case when s.auth_user_id = v_svm_uid and s.status = 'Active'
