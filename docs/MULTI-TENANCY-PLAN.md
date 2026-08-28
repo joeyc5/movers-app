@@ -368,10 +368,10 @@ PreToolUse hook denies that command.
 | `0012_companies.sql` | `companies`, `user_active_company`, `app.current_company_id()` stub, their RLS + grants, indexes |
 | `0013_company_id_columns.sql` | Add `company_id` **nullable** to all tenant tables + `app.code_counters` |
 | `0014_backfill.sql` | Create Demo Movers, backfill every row, `set not null`, add indexes |
-| `0015_constraints.sql` | 24 uniques → composite; 2 partial default-indexes → composite; 48 FKs → composite (27 using the `set null (col)` form); drop `company_billing_profile_singleton` |
+| `0015_constraints.sql` | 24 uniques → composite; 2 partial default-indexes → composite; 48 FKs → composite (27 using the `set null (col)` form) |
 | `0016_helpers_and_rls.sql` | Real `current_company_id()`; rewrite 5 helpers + `assert_owner_remains`; **set the column defaults**; rewrite all 88 policies |
 | `0017_rpcs.sql` | Code minters, `claim_staff_for_current_user`, the five `admin_*` RPCs |
-| `0018_views_grants.sql` | Views project `company_id`; re-issue grants |
+| `0018_storage_grants.sql` | Company-prefixed storage paths; rekey `company_billing_profile` on `company_id` and drop `company_billing_profile_singleton`; re-issue grants |
 | `0019_provisioning.sql` | `create_company()` + SVM tenant |
 | `9999_security_guard.sql` | **Edit in place**: table count 27 → 29, extend the grant array, add multi-tenancy checks |
 
