@@ -13,6 +13,7 @@
     "prepare": "husky",
     "generate:presets": "ts-node -P tsconfig.scripts.json src/scripts/generate-theme-presets.ts",
     "seed:auth": "ts-node -P tsconfig.scripts.json scripts/seed-auth-users.ts",
+    "seed:svm-owner": "ts-node -P tsconfig.scripts.json scripts/seed-svm-owner.ts",
     "seed:documents": "ts-node -P tsconfig.scripts.json scripts/seed-documents.ts",
     "seed:dev": "ts-node -P tsconfig.scripts.json scripts/seed-dev.ts",
     "gen:types": "supabase gen types typescript --project-id jannhzvqrsumtscidtkx > src/lib/supabase/database.types.ts"
