@@ -81,6 +81,11 @@ declare
     -- role_table_grants cannot see them.
     'staff|SELECT',
 
+    -- The two multi-tenancy tables added in 0012. SELECT ONLY: no
+    -- switcher ships yet, so neither has a legitimate writer.
+    'companies|SELECT',
+    'user_active_company|SELECT',
+
     -- The four security_invoker views.
     'calendar_events_expanded|SELECT',
     'roles_expanded|SELECT',
@@ -175,10 +180,11 @@ begin
   end if;
 
   -- ===================================================================
-  -- 3. RLS enabled on every table -- all 27, public AND app.
+  -- 3. RLS enabled on every table -- all 29, public AND app.
   --
-  -- app.code_counters is the 27th. It is deliberately scoped in here and
-  -- deliberately scoped OUT of check 4.
+  -- app.code_counters is the 29th. It is deliberately scoped in here and
+  -- deliberately scoped OUT of check 4. The count rose from 27 to 29 in
+  -- 0012, which added public.companies and public.user_active_company.
   -- ===================================================================
   select string_agg(n.nspname || '.' || c.relname, ', ' order by n.nspname, c.relname)
     into v_bad
@@ -197,9 +203,9 @@ begin
   join pg_namespace n on n.oid = c.relnamespace
   where n.nspname in ('public', 'app', 'dev_seed') and c.relkind in ('r','p');
 
-  if v_n <> 27 then
+  if v_n <> 29 then
     raise exception
-      'EXPECTED 27 TABLES across public + app, found %. A missing table means a migration did not land; an extra one means this guard has not been updated to cover it.',
+      'EXPECTED 29 TABLES across public + app, found %. A missing table means a migration did not land; an extra one means this guard has not been updated to cover it.',
       v_n;
   end if;
 
