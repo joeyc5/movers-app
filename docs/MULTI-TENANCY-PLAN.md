@@ -6,6 +6,7 @@ from a single-company CRM to proper multi-tenant SaaS.
 ## Status
 
 - [x] **Step 0 — FK behaviour spike. PROVEN, see "ON DELETE SET NULL" below.**
+- [x] **Step 0 — PostgREST embed-hint baseline. RECORDED, see "PostgREST embed hints" below.**
 - [ ] `0012_companies.sql`
 - [ ] `0013_company_id_columns.sql`
 - [ ] `0014_backfill.sql`
@@ -204,6 +205,55 @@ preserve that ordering.
 
 *Note: the `unique (company_id, id)` indexes are redundant for lookup, since `id`
 is already a PK. They exist solely as FK targets. That is an accepted cost.*
+
+### PostgREST embed hints — BASELINE RECORDED, re-run after Task 4
+
+Gates Task 4: if column-name embed hints (`client:client_id ( code )`) stop
+resolving once `deals_client_id_fkey` becomes a composite FK, roughly 5 query
+call sites (starting with `src/server/queries/deals.ts:20`) must change to
+constraint-name hints (`client:deals_client_id_fkey ( code )`) in the same
+commit as the constraint swap.
+
+PostgREST only exposes `public`, so the spike schema (`embed_spike.parent` /
+`embed_spike.child`, same shape as the FK spike above, dropped after the run)
+could not be used to test the embed question directly. It was created anyway
+to re-prove the `on delete set null (parent_id)` column-list DDL compiles on
+this server, which is the form all 27 SET NULL composite FKs will use in
+Task 4. That compiled cleanly, matching the result above.
+
+The embed question itself was tested against the real, currently-single-column
+`deals_client_id_fkey`, to capture the pre-Task-4 baseline for comparison.
+
+Current shape of the constraint, from `pg_constraint`:
+
+```
+conname                | tbl   | cols
+------------------------+-------+---------------
+deals_accepted_quote_id_fkey | deals | {accepted_quote_id}
+deals_client_id_fkey         | deals | {client_id}
+deals_owner_staff_id_fkey    | deals | {owner_staff_id}
+```
+
+`deals_client_id_fkey` is single-column: `{client_id}`. After Task 4 it becomes
+`{company_id,client_id}`.
+
+HTTP request, as Elena Torres (Dispatcher, Scoped):
+
+```
+GET /rest/v1/deals?select=code,client:client_id(code)&limit=1
+```
+
+Response: `200 OK`
+
+```json
+[{"code":"DEAL-3015","client":{"code": "CLT-1014"}}]
+```
+
+This is the baseline. Re-run both queries after Task 4. If the embed request
+comes back `PGRST200` instead of `200`, switch `client:client_id ( code )` to
+the constraint-name form `client:deals_client_id_fkey ( code )` in
+`src/server/queries/deals.ts:20` and the ~4 other call sites with the same
+pattern, in the same commit as the constraint swap.
 
 ### Policy shape
 
