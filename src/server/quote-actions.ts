@@ -94,8 +94,25 @@ export async function createQuote(dealCode: string): Promise<QuoteActionResult> 
     supabase.from("rate_cards").select("id, crew_rates ( crew_size )").eq("is_default", true).maybeSingle(),
     supabase.from("tax_rates").select("id, rate_percent").eq("is_default", true).maybeSingle(),
   ]);
-  if (cardError || !card) {
-    return failure("Could not create the quote", cardError?.message ?? "no default rate card is configured");
+  // `is_default` is only enforced unique per company (a partial index, not
+  // a global one), so this is the same RLS-derived, no-longer-structural
+  // guarantee as getCurrentStaff()'s .maybeSingle() in auth.ts. No row is
+  // a legitimate "nobody has configured a default rate card yet"; an
+  // actual error (including PGRST116 for an unexpected multi-row match)
+  // is a real defect and must not be reported to the user as the same
+  // "not configured" message.
+  if (cardError) {
+    console.error("createQuote: default rate card lookup failed", {
+      dealCode,
+      code: cardError.code,
+      message: cardError.message,
+      details: cardError.details,
+      hint: cardError.hint,
+    });
+    return failure("Could not create the quote", cardError.message);
+  }
+  if (!card) {
+    return failure("Could not create the quote", "no default rate card is configured");
   }
 
   const crewSizes = ((card.crew_rates ?? []) as { crew_size: number }[]).map((r) => r.crew_size).sort((a, b) => a - b);
