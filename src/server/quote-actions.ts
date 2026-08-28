@@ -4,7 +4,11 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { requireAuth } from "@/lib/supabase/auth";
+import type { Database } from "@/lib/supabase/database.types";
 import { createClient } from "@/lib/supabase/server";
+
+type QuoteUpdate = Database["public"]["Tables"]["quotes"]["Update"];
+type QuoteLineItemUpdate = Database["public"]["Tables"]["quote_line_items"]["Update"];
 
 /**
  * Quote mutations. Every action runs as the signed-in staff member, so RLS
@@ -149,7 +153,7 @@ export async function updateQuoteDraft(
   await requireAuth();
   const supabase = await createClient();
 
-  const update: Record<string, unknown> = {};
+  const update: QuoteUpdate = {};
 
   if (patch.rateCardId !== undefined || patch.crewSize !== undefined) {
     const { data: current, error: readError } = await supabase
@@ -249,7 +253,7 @@ export async function updateLineItem(
   await requireAuth();
   const supabase = await createClient();
 
-  const update: Record<string, unknown> = {};
+  const update: QuoteLineItemUpdate = {};
   if (patch.quantity !== undefined) update.quantity = patch.quantity;
   if (patch.unitPrice !== undefined) update.unit_price = patch.unitPrice;
   if (Object.keys(update).length === 0) return {};
