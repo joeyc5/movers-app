@@ -1,7 +1,8 @@
 # movers-app
 
-Read docs/HANDOFF.md first. It is the state of record: what reads live data,
-what is still static, and the landmines already fixed.
+Multi-tenant SaaS CRM for movers. Read docs/HANDOFF.md first. It is the
+state of record: what reads live data, what is still static, and the
+landmines already fixed.
 
 - `.env` is tracked on purpose. It holds only public Supabase values and
   Vercel builds read it. Never add `.env*` to .gitignore; the Vercel CLI
@@ -35,3 +36,12 @@ what is still static, and the landmines already fixed.
 - Deleting from `storage.objects` needs `storage.allow_delete_query` set
   first. Supabase's `storage.protect_delete()` trigger blocks a plain
   `DELETE` on that table even as `postgres`.
+- Run both guards after any migration: `9999_security_guard.sql` (access
+  control shape) and `0021_tenancy_guard.sql` (tenancy shape). Neither is
+  optional; each catches a class of regression the other cannot.
+- PostgREST embed hints on composite FKs must use constraint-name form
+  (`deals!deals_client_id_fkey(...)`), not column-name form. Column-name
+  hints break against composite FKs and return PGRST200.
+- `supabase/tests/verify-isolation.sql` proves tenant semantics. Run it
+  as one MCP `execute_sql` call (it uses `pg_temp` and `SET LOCAL ROLE`,
+  both session-scoped). It rolls back everything it touches.
