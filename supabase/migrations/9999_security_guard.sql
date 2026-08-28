@@ -28,12 +28,22 @@
 -- BREAK IT ON PURPOSE BEFORE YOU TRUST IT. A guard nobody has watched
 -- fail is a guard with an unknown hole. The break list is at the foot of
 -- this file, one statement per check.
+--
+-- COLLECTS, DOES NOT ABORT AT THE FIRST HIT. Every check below used to
+-- `raise exception` the moment it found something wrong, which meant the
+-- REST of the checks never ran that call -- a stale count in check 3
+-- masked whatever checks 4 through 12 would have caught, for however
+-- long it took someone to notice. Every check now appends its own
+-- message to v_fail instead, and the block raises exactly once at the
+-- end, naming every failing check in one message. The predicates
+-- themselves are unchanged; only how a failure is reported changed.
 -- =====================================================================
 
 do $$
 declare
   v_bad      text;
   v_n        integer;
+  v_fail     text[] := array[]::text[];
   v_expected constant text[] := array[
     -- Every table and view in `public`, with the EXACT privilege list
     -- `authenticated` is meant to hold. This array is the contract; if
@@ -112,10 +122,10 @@ begin
   -- through the PUBLIC pseudo-role.
   -- ===================================================================
   if has_schema_privilege('anon', 'public', 'USAGE') then
-    raise exception
-      'ANON HOLDS USAGE ON SCHEMA public. Revoking from `anon` is inert -- the grant is the `=U` PUBLIC entry in the schema ACL. Current ACL: %',
+    v_fail := array_append(v_fail, format(
+      'CHECK 1 (anon schema USAGE): ANON HOLDS USAGE ON SCHEMA public. Revoking from `anon` is inert -- the grant is the `=U` PUBLIC entry in the schema ACL. Current ACL: %s',
       (select coalesce(nspacl::text, '(default: PUBLIC has USAGE)')
-       from pg_namespace where nspname = 'public');
+       from pg_namespace where nspname = 'public')));
   end if;
 
   -- ===================================================================
@@ -159,8 +169,8 @@ begin
     and r.rolname <> 'supabase_admin';   -- see the exemption note above
 
   if v_bad is not null then
-    raise exception
-      'DEFAULT PRIVILEGES STILL OPEN in public -- every table created from now on lands granted: %', v_bad;
+    v_fail := array_append(v_fail, format(
+      'CHECK 2 (default privileges): DEFAULT PRIVILEGES STILL OPEN in public -- every table created from now on lands granted: %s', v_bad));
   end if;
 
   -- 2b. The exemption's own guard. The unreachable supabase_admin
@@ -174,9 +184,9 @@ begin
     and r.rolname = 'supabase_admin';
 
   if v_bad is not null then
-    raise exception
-      'supabase_admin OWNS OBJECTS IN public (%). Its pg_default_acl row grants anon and authenticated arwdDxtm and postgres cannot revoke it (measured 42501), so those objects are granted and the check-2 exemption is void.',
-      v_bad;
+    v_fail := array_append(v_fail, format(
+      'CHECK 2b (supabase_admin ownership): supabase_admin OWNS OBJECTS IN public (%s). Its pg_default_acl row grants anon and authenticated arwdDxtm and postgres cannot revoke it (measured 42501), so those objects are granted and the check-2 exemption is void.',
+      v_bad));
   end if;
 
   -- ===================================================================
@@ -195,7 +205,8 @@ begin
     and not c.relrowsecurity;
 
   if v_bad is not null then
-    raise exception 'RLS NOT ENABLED (readable by anyone holding a grant): %', v_bad;
+    v_fail := array_append(v_fail, format(
+      'CHECK 3a (RLS enabled): RLS NOT ENABLED (readable by anyone holding a grant): %s', v_bad));
   end if;
 
   select count(*) into v_n
@@ -204,9 +215,9 @@ begin
   where n.nspname in ('public', 'app', 'dev_seed') and c.relkind in ('r','p');
 
   if v_n <> 29 then
-    raise exception
-      'EXPECTED 29 TABLES across public + app, found %. A missing table means a migration did not land; an extra one means this guard has not been updated to cover it.',
-      v_n;
+    v_fail := array_append(v_fail, format(
+      'CHECK 3b (table count): EXPECTED 29 TABLES across public + app, found %s. A missing table means a migration did not land; an extra one means this guard has not been updated to cover it.',
+      v_n));
   end if;
 
   -- ===================================================================
@@ -226,7 +237,8 @@ begin
     and not exists (select 1 from pg_policy p where p.polrelid = c.oid);
 
   if v_bad is not null then
-    raise exception 'RLS ON BUT NO POLICY (every query returns 0 rows, no error): %', v_bad;
+    v_fail := array_append(v_fail, format(
+      'CHECK 4 (RLS with no policy): RLS ON BUT NO POLICY (every query returns 0 rows, no error): %s', v_bad));
   end if;
 
   -- ===================================================================
@@ -247,7 +259,8 @@ begin
                   where option_name = 'security_invoker'), 'false') <> 'true';
 
   if v_bad is not null then
-    raise exception 'VIEW BYPASSES RLS (security_invoker is not true, it reads as its owner): %', v_bad;
+    v_fail := array_append(v_fail, format(
+      'CHECK 5 (view security_invoker): VIEW BYPASSES RLS (security_invoker is not true, it reads as its owner): %s', v_bad));
   end if;
 
   -- ===================================================================
@@ -258,7 +271,8 @@ begin
   where table_schema = 'public' and grantee = 'anon';
 
   if v_bad is not null then
-    raise exception 'anon STILL HOLDS TABLE PRIVILEGES in public: %', v_bad;
+    v_fail := array_append(v_fail, format(
+      'CHECK 6a (anon table grants): anon STILL HOLDS TABLE PRIVILEGES in public: %s', v_bad));
   end if;
 
   select string_agg(distinct table_name || '.' || column_name || ':' || privilege_type, ', ') into v_bad
@@ -266,7 +280,8 @@ begin
   where table_schema = 'public' and grantee = 'anon';
 
   if v_bad is not null then
-    raise exception 'anon STILL HOLDS COLUMN PRIVILEGES in public (invisible to the table-level query): %', v_bad;
+    v_fail := array_append(v_fail, format(
+      'CHECK 6b (anon column grants): anon STILL HOLDS COLUMN PRIVILEGES in public (invisible to the table-level query): %s', v_bad));
   end if;
 
   -- ===================================================================
@@ -312,7 +327,8 @@ begin
   ) x;
 
   if v_bad is not null then
-    raise exception E'authenticated GRANTS DO NOT MATCH THE EXPECTED SET:\n    %', v_bad;
+    v_fail := array_append(v_fail, format(
+      E'CHECK 7 (authenticated grant set): authenticated GRANTS DO NOT MATCH THE EXPECTED SET:\n    %s', v_bad));
   end if;
 
   -- ===================================================================
@@ -337,9 +353,9 @@ begin
     and column_name in ('role_id','status','auth_user_id','work_email');
 
   if v_bad is not null then
-    raise exception
-      'PRIVILEGE ESCALATION: authenticated can write staff(%). Those four columns move only through the SECURITY DEFINER RPCs in 0006. If you granted table-wide UPDATE to make the Profile screen work, the correct grant is `grant update (full_name, avatar_url) on public.staff to authenticated`.',
-      v_bad;
+    v_fail := array_append(v_fail, format(
+      'CHECK 8 (staff escalation columns): PRIVILEGE ESCALATION: authenticated can write staff(%s). Those four columns move only through the SECURITY DEFINER RPCs in 0006. If you granted table-wide UPDATE to make the Profile screen work, the correct grant is `grant update (full_name, avatar_url) on public.staff to authenticated`.',
+      v_bad));
   end if;
 
   -- ===================================================================
@@ -383,9 +399,9 @@ begin
     );
 
   if v_bad is not null then
-    raise exception
-      'UNACCOUNTED COLUMN GRANTS to authenticated (invisible to information_schema.role_table_grants): %',
-      v_bad;
+    v_fail := array_append(v_fail, format(
+      'CHECK 9 (unaccounted column grants): UNACCOUNTED COLUMN GRANTS to authenticated (invisible to information_schema.role_table_grants): %s',
+      v_bad));
   end if;
 
   -- ===================================================================
@@ -401,7 +417,8 @@ begin
     and grantee in ('anon','authenticated');
 
   if v_bad is not null then
-    raise exception 'app.code_counters IS GRANTED to %. It is written only by the SECURITY DEFINER code minters.', v_bad;
+    v_fail := array_append(v_fail, format(
+      'CHECK 10 (code_counters grants): app.code_counters IS GRANTED to %s. It is written only by the SECURITY DEFINER code minters.', v_bad));
   end if;
 
   -- ===================================================================
@@ -423,7 +440,8 @@ begin
        or has_sequence_privilege(r.rolname, c.oid, 'UPDATE') );
 
   if v_bad is not null then
-    raise exception 'SEQUENCE PRIVILEGES GRANTED (D9 says never): %', v_bad;
+    v_fail := array_append(v_fail, format(
+      'CHECK 11 (sequence privileges): SEQUENCE PRIVILEGES GRANTED (D9 says never): %s', v_bad));
   end if;
 
   -- ===================================================================
@@ -436,15 +454,18 @@ begin
   -- omission -- and therefore something a guard has to assert.
   -- ===================================================================
   if not exists (select 1 from storage.buckets where id = 'documents') then
-    raise exception 'STORAGE BUCKET `documents` DOES NOT EXIST. Every Download button 404s.';
+    v_fail := array_append(v_fail,
+      'CHECK 12a (bucket exists): STORAGE BUCKET `documents` DOES NOT EXIST. Every Download button 404s.');
   end if;
 
   if exists (select 1 from storage.buckets where id = 'documents' and public) then
-    raise exception 'STORAGE BUCKET `documents` IS PUBLIC. Every bill of lading is world-readable by URL.';
+    v_fail := array_append(v_fail,
+      'CHECK 12b (bucket private): STORAGE BUCKET `documents` IS PUBLIC. Every bill of lading is world-readable by URL.');
   end if;
 
   if not (select relrowsecurity from pg_class where oid = 'storage.objects'::regclass) then
-    raise exception 'RLS IS OFF ON storage.objects and authenticated holds full DML on it.';
+    v_fail := array_append(v_fail,
+      'CHECK 12c (storage.objects RLS): RLS IS OFF ON storage.objects and authenticated holds full DML on it.');
   end if;
 
   select string_agg(polname, ', ' order by polname) into v_bad
@@ -453,9 +474,9 @@ begin
     and polcmd = 'd';
 
   if v_bad is not null then
-    raise exception
-      'A DELETE POLICY EXISTS ON storage.objects (%). No policy is what enforces the 49 CFR 375.505(d) one-year bill-of-lading retention floor; hard delete is a service-role job.',
-      v_bad;
+    v_fail := array_append(v_fail, format(
+      'CHECK 12d (no delete policy): A DELETE POLICY EXISTS ON storage.objects (%s). No policy is what enforces the 49 CFR 375.505(d) one-year bill-of-lading retention floor; hard delete is a service-role job.',
+      v_bad));
   end if;
 
   select string_agg(e.want, ', ') into v_bad
@@ -466,7 +487,16 @@ begin
   );
 
   if v_bad is not null then
-    raise exception 'STORAGE OBJECT POLICIES MISSING (%). Uploads and downloads will 403 for everyone.', v_bad;
+    v_fail := array_append(v_fail, format(
+      'CHECK 12e (storage object policies): STORAGE OBJECT POLICIES MISSING (%s). Uploads and downloads will 403 for everyone.', v_bad));
+  end if;
+
+  -- ===================================================================
+  -- Report every failure collected above, in one exception, or pass.
+  -- ===================================================================
+  if array_length(v_fail, 1) is not null then
+    raise exception E'security guard: % of 12 checks failed:\n  - %',
+      array_length(v_fail, 1), array_to_string(v_fail, E'\n  - ');
   end if;
 
   raise notice 'security guard: all 12 checks passed.';
