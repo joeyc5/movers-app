@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getCurrentStaff } from "@/lib/supabase/auth";
-import { getClientByCode } from "@/server/queries/clients";
+import { canWriteClients, getAccountOwnerOptions, getClientByCode } from "@/server/queries/clients";
 import { getCompanyBillingProfile } from "@/server/queries/company";
 
 import { ClientHeader } from "./_components/client-header";
@@ -16,10 +16,12 @@ interface PageProps {
 
 export default async function Page({ params }: PageProps) {
   const { id } = await params;
-  const [client, billingProfile, staff] = await Promise.all([
+  const [client, billingProfile, staff, owners, canWrite] = await Promise.all([
     getClientByCode(id),
     getCompanyBillingProfile(),
     getCurrentStaff(),
+    getAccountOwnerOptions(),
+    canWriteClients(),
   ]);
 
   if (!client) {
@@ -30,7 +32,7 @@ export default async function Page({ params }: PageProps) {
 
   return (
     <div className="flex flex-col gap-4">
-      <ClientHeader client={client} />
+      <ClientHeader client={client} owners={owners} canWrite={canWrite} />
 
       <Tabs className="min-h-0 flex-1 gap-0" defaultValue="overview">
         <div className="scrollbar-none touch-pan-x overflow-x-auto overscroll-x-contain border-y">

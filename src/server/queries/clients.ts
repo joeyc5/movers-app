@@ -3,6 +3,7 @@ import "server-only";
 import { cache } from "react";
 
 import type { Address, Client } from "@/app/(main)/dashboard/clients/_components/data";
+import { getCurrentStaff } from "@/lib/supabase/auth";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -22,6 +23,7 @@ const CLIENT_COLUMNS = `
   origin_street, origin_city, origin_state, origin_zip,
   destination_street, destination_city, destination_state, destination_zip,
   created_date, last_activity_date, notes,
+  account_owner_staff_id,
   account_owner:clients_account_owner_staff_id_fkey ( full_name )
 `;
 
@@ -51,6 +53,7 @@ interface ClientRow {
   created_date: string;
   last_activity_date: string;
   notes: string | null;
+  account_owner_staff_id: string | null;
   account_owner: StaffRef;
 }
 
@@ -90,6 +93,7 @@ function toClient(row: ClientRow): Client {
     // Never filtered by staff.status: one seeded rep is Deactivated and owns
     // five clients. Requiring an active owner would silently drop those rows.
     accountOwner: staffName(row.account_owner),
+    accountOwnerId: row.account_owner_staff_id,
     createdDate: row.created_date,
     lastActivityDate: row.last_activity_date,
     notes: row.notes ?? undefined,
@@ -114,4 +118,52 @@ export const getClientByCode = cache(async (code: string): Promise<Client | null
 
   if (error) throw new Error(`Failed to load client ${code}: ${error.message}`);
   return data ? toClient(data as unknown as ClientRow) : null;
+});
+
+export interface AccountOwnerOption {
+  id: string;
+  name: string;
+  active: boolean;
+}
+
+/**
+ * Assignable account owners. Every staff member is returned, deactivated
+ * included: Sofia Marchetti owns five clients and dropping her would blank
+ * the owner on any account she holds when it is edited. The form marks who
+ * is no longer active rather than hiding them.
+ */
+export const getAccountOwnerOptions = cache(async (): Promise<AccountOwnerOption[]> => {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("staff")
+    .select("id, full_name, status")
+    .order("full_name", { ascending: true });
+
+  if (error) throw new Error(`Failed to load account owners: ${error.message}`);
+  return (data ?? []).map((row) => ({ id: row.id, name: row.full_name, active: row.status === "Active" }));
+});
+
+/**
+ * Mirrors app.has_perm('clients', true) read-side, so the screen omits write
+ * affordances the database would reject. RLS is the enforcement; this only
+ * decides what to render. Same shape as canWriteQuotes in queries/quotes.ts.
+ */
+export const canWriteClients = cache(async (): Promise<boolean> => {
+  const staff = await getCurrentStaff();
+  if (!staff || staff.status !== "Active") return false;
+
+  const level = staff.role?.access_level;
+  if (level === "Read only") return false;
+  if (level === "Full") return true;
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("role_permission_sets")
+    .select("permission_set:permission_set_id!inner ( slug )")
+    .eq("role_id", staff.role_id)
+    .eq("permission_set.slug", "clients")
+    .limit(1);
+
+  if (error) return false;
+  return (data ?? []).length > 0;
 });
