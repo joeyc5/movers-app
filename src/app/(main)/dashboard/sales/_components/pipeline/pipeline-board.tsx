@@ -11,21 +11,10 @@ import {
   type DragStartEvent,
 } from "@dnd-kit/react";
 import { isSortable } from "@dnd-kit/react/sortable";
-import { toast } from "sonner";
-
-import { moveDeal } from "@/server/deal-actions";
 
 import { type BoardState, type PipelineDeal, type PipelineStage, pipelineStages } from "../data";
 import { DealCard } from "./deal-card";
 import { PipelineColumn } from "./pipeline-column";
-
-/** The stage that currently holds a given deal in a board snapshot. */
-function stageOf(board: BoardState, code: string): PipelineStage | null {
-  for (const stage of pipelineStages) {
-    if (board[stage].some((deal) => deal.id === code)) return stage;
-  }
-  return null;
-}
 
 interface PipelineBoardProps {
   initialBoard: BoardState;
@@ -57,73 +46,24 @@ function isDealDragData(value: unknown): value is DealDragData {
 
 export function PipelineBoard({ initialBoard }: PipelineBoardProps) {
   const [board, setBoard] = React.useState<BoardState>(initialBoard);
-  const boardRef = React.useRef<BoardState>(initialBoard);
   const boardBeforeDrag = React.useRef<BoardState>(initialBoard);
-  const [, startTransition] = React.useTransition();
-
-  // Keep the latest board in sync everywhere. setBoard flows through here so
-  // handleDragEnd can read the just-dropped arrangement from a ref without
-  // waiting for a re-render.
-  const commitBoard = React.useCallback((next: BoardState) => {
-    boardRef.current = next;
-    setBoard(next);
-  }, []);
-
-  // The server is the source of truth after a refresh, so a new server
-  // snapshot from revalidation replaces local state.
-  React.useEffect(() => {
-    boardRef.current = initialBoard;
-    boardBeforeDrag.current = initialBoard;
-    setBoard(initialBoard);
-  }, [initialBoard]);
 
   function handleDragStart(event: DragStartEvent) {
     if (event.operation.source?.type === "deal") {
-      boardBeforeDrag.current = boardRef.current;
+      boardBeforeDrag.current = board;
     }
   }
 
   function handleDragOver(event: DragOverEvent) {
     if (event.operation.source?.type === "deal") {
-      commitBoard(move(boardRef.current, event));
+      setBoard((currentBoard) => move(currentBoard, event));
     }
   }
 
   function handleDragEnd(event: DragEndEvent) {
-    if (event.operation.source?.type !== "deal") return;
-
-    const snapshot = boardBeforeDrag.current;
-
-    if (event.canceled) {
-      commitBoard(snapshot);
-      return;
+    if (event.canceled && event.operation.source?.type === "deal") {
+      setBoard(boardBeforeDrag.current);
     }
-
-    // handleDragOver already moved the card; boardRef holds the drop result.
-    const current = boardRef.current;
-    const code = String(event.operation.source.id);
-    const toStage = stageOf(current, code);
-    const fromStage = stageOf(snapshot, code);
-    if (!toStage) return;
-
-    const affected: PipelineStage[] = fromStage && fromStage !== toStage ? [fromStage, toStage] : [toStage];
-
-    // A drop that changed nothing writes nothing.
-    const beforeKey = affected.map((s) => snapshot[s].map((d) => d.id).join(",")).join("|");
-    const afterKey = affected.map((s) => current[s].map((d) => d.id).join(",")).join("|");
-    if (beforeKey === afterKey) return;
-
-    const positions = affected.flatMap((stage) =>
-      current[stage].map((deal, index) => ({ code: deal.id, position: index })),
-    );
-
-    startTransition(async () => {
-      const result = await moveDeal({ code, toStage, positions });
-      if (result.error) {
-        toast.error(result.error);
-        commitBoard(snapshot);
-      }
-    });
   }
 
   return (

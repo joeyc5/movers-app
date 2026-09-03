@@ -1,21 +1,25 @@
-import { Building2, User } from "lucide-react";
+import { Building2, Ellipsis, Mail, Pencil, User } from "lucide-react";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn, getInitials } from "@/lib/utils";
-import type { AccountOwnerOption } from "@/server/queries/clients";
 
 import type { Client } from "../../_components/data";
 import { statusMeta } from "../../_components/data";
-import { ClientHeaderActions } from "./client-header-actions";
 
 interface ClientHeaderProps {
   client: Client;
-  owners: AccountOwnerOption[];
-  canWrite: boolean;
 }
 
-export function ClientHeader({ client, owners, canWrite }: ClientHeaderProps) {
+export function ClientHeader({ client }: ClientHeaderProps) {
   const meta = statusMeta[client.status];
 
   return (
@@ -48,7 +52,30 @@ export function ClientHeader({ client, owners, canWrite }: ClientHeaderProps) {
         </div>
       </div>
 
-      <ClientHeaderActions client={client} owners={owners} canWrite={canWrite} />
+      <div className="flex items-center gap-2">
+        <Button asChild size="sm" variant="outline">
+          <a href={`mailto:${client.email}`}>
+            <Mail data-icon="inline-start" />
+            Email
+          </a>
+        </Button>
+        <Button size="sm">
+          <Pencil data-icon="inline-start" />
+          Edit details
+        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button aria-label="More client actions" size="icon-sm" variant="outline">
+              <Ellipsis />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuItem>Log activity</DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem variant="destructive">Archive client</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
     </div>
   );
 }

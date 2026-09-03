@@ -7,7 +7,8 @@ interface PageProps {
 }
 
 const REASON_COPY: Record<string, string> = {
-  "no-membership": "This account has not joined a company yet. Create your company to get started.",
+  "no-membership":
+    "This account has no active membership in any company. Contact an administrator if you believe this is an error.",
   "revoked-selection":
     "Your access to this company has been revoked. Contact an administrator if you believe this is an error.",
 };

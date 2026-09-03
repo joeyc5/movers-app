@@ -43,9 +43,8 @@ export async function proxy(request: NextRequest) {
   // reads the session.
   const { data } = await supabase.auth.getClaims();
 
-  // A signed-in caller has no business on the login or register screens.
-  const authPath = request.nextUrl.pathname;
-  if (data?.claims && (authPath.startsWith("/auth/v1/login") || authPath.startsWith("/auth/v1/register"))) {
+  // A signed-in caller has no business on the login screen.
+  if (data?.claims && request.nextUrl.pathname.startsWith("/auth/v1/login")) {
     return NextResponse.redirect(new URL("/dashboard/default", request.url));
   }
 

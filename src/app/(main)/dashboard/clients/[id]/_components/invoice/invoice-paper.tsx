@@ -1,12 +1,22 @@
 import { formatCurrency } from "@/lib/utils";
-import type { InvoiceView } from "@/server/queries/invoices";
 
-import { INVOICE_PAPER_HEIGHT, INVOICE_PAPER_WIDTH, type InvoiceFromDetails } from "./data";
+import {
+  getInvoiceDiscount,
+  getInvoiceItems,
+  getInvoiceSubtotal,
+  getInvoiceTax,
+  getInvoiceTaxOption,
+  getInvoiceTotal,
+  getLineAmount,
+  INVOICE_PAPER_HEIGHT,
+  INVOICE_PAPER_WIDTH,
+  type InvoiceFormValues,
+} from "./data";
 
-export function InvoicePaper({ invoice, from }: { invoice: InvoiceView; from: InvoiceFromDetails }) {
-  const discountLabel = invoice.discountType === "percent" ? `Discount ${invoice.discountValue}%` : "Discount";
-  const billToAddress = [invoice.billToAddressLine1, invoice.billToAddressLine2].filter(Boolean) as string[];
-  const issuedBy = invoice.issuedByName ?? from.issuerName;
+export function InvoicePaper({ invoice }: { invoice: InvoiceFormValues }) {
+  const taxOption = getInvoiceTaxOption(invoice);
+  const discountValue = Number.isFinite(invoice.discountValue) ? invoice.discountValue : 0;
+  const discountLabel = invoice.discountType === "percent" ? `Discount ${discountValue}%` : "Discount";
 
   return (
     <article
@@ -27,33 +37,33 @@ export function InvoicePaper({ invoice, from }: { invoice: InvoiceView; from: In
 
         <section className="grid grid-cols-2 gap-14 text-sm leading-relaxed">
           <div>
-            <p>Reference: {invoice.code}</p>
+            <p>Reference: {invoice.referenceNumber}</p>
             <p>Issued: {invoice.issuedDate}</p>
             <p>Payment due: {invoice.paymentDueDate}</p>
           </div>
           <div>
             <p>Payment account</p>
-            <p>{from.paymentAccountName}</p>
-            <p>Routing no. {from.routingNumber}</p>
+            <p>{invoice.from.paymentAccountName}</p>
+            <p>Routing no. {invoice.from.routingNumber}</p>
           </div>
         </section>
 
         <section className="grid grid-cols-2 gap-14 text-sm leading-relaxed">
           <div>
             <p className="mb-4 font-semibold uppercase">From</p>
-            <p>{from.name}</p>
-            {from.addressLines.map((line) => (
+            <p>{invoice.from.name}</p>
+            {invoice.from.addressLines.map((line) => (
               <p key={line}>{line}</p>
             ))}
-            <p>Tax ID: {from.taxId}</p>
+            <p>Tax ID: {invoice.from.taxId}</p>
           </div>
           <div>
             <p className="mb-4 font-semibold uppercase">Bill to</p>
-            <p>{invoice.billToName}</p>
-            {billToAddress.map((line) => (
+            <p>{invoice.to.name}</p>
+            {invoice.to.addressLines.map((line) => (
               <p key={line}>{line}</p>
             ))}
-            {invoice.customerTaxId ? <p>Tax ID: {invoice.customerTaxId}</p> : null}
+            {invoice.to.taxId ? <p>Tax ID: {invoice.to.taxId}</p> : null}
           </div>
         </section>
       </header>
@@ -66,15 +76,15 @@ export function InvoicePaper({ invoice, from }: { invoice: InvoiceView; from: In
             <span className="text-right">Unit cost</span>
             <span className="text-right">Line total</span>
           </div>
-          {invoice.lineItems.map((item) => (
+          {getInvoiceItems(invoice).map((item) => (
             <div
               key={item.id}
               className="grid grid-cols-[1fr_74px_116px_116px] border-[oklch(0.86_0_0)] border-b px-3 py-4"
             >
-              <span>{item.description || "Item"}</span>
+              <span>{item.description}</span>
               <span className="text-right">{item.quantity}</span>
               <span className="text-right">{formatInvoiceCurrency(item.unitPrice)}</span>
-              <span className="text-right">{formatInvoiceCurrency(item.amount)}</span>
+              <span className="text-right">{formatInvoiceCurrency(getLineAmount(item))}</span>
             </div>
           ))}
         </section>
@@ -84,21 +94,23 @@ export function InvoicePaper({ invoice, from }: { invoice: InvoiceView; from: In
             <div>
               <div className="flex justify-between gap-8">
                 <span>Net amount</span>
-                <span>{formatInvoiceCurrency(invoice.subtotal)}</span>
+                <span>{formatInvoiceCurrency(getInvoiceSubtotal(invoice))}</span>
               </div>
               <div className="flex justify-between gap-8">
                 <span>{discountLabel}</span>
-                <span>{formatInvoiceCurrency(invoice.discountAmount)}</span>
+                <span>{formatInvoiceCurrency(getInvoiceDiscount(invoice))}</span>
               </div>
               <div className="flex justify-between gap-8">
-                <span>Tax {invoice.taxRatePercent}%</span>
-                <span>{formatInvoiceCurrency(invoice.taxAmount)}</span>
+                <span>
+                  {taxOption.name} {taxOption.rate}%
+                </span>
+                <span>{formatInvoiceCurrency(getInvoiceTax(invoice))}</span>
               </div>
             </div>
             <div className="border-current border-y-2 py-3">
               <div className="flex justify-between gap-8">
                 <span className="font-semibold uppercase">Balance due</span>
-                <span className="font-semibold">{formatInvoiceCurrency(invoice.balanceDue)}</span>
+                <span className="font-semibold">{formatInvoiceCurrency(getInvoiceTotal(invoice))}</span>
               </div>
             </div>
           </section>
@@ -107,13 +119,13 @@ export function InvoicePaper({ invoice, from }: { invoice: InvoiceView; from: In
 
       <footer className="absolute right-12.25 bottom-11 left-12.25 grid grid-cols-2 gap-14 text-neutral-500 text-sm leading-relaxed">
         <div>
-          <p>{from.email}</p>
-          <p>{from.phone}</p>
-          <p>{from.website}</p>
+          <p>{invoice.from.email}</p>
+          <p>{invoice.from.phone}</p>
+          <p>{invoice.from.website}</p>
         </div>
         <div>
           <p>Prepared for prompt processing.</p>
-          <p>Issued by {issuedBy}</p>
+          <p>Issued by {invoice.from.issuerName}</p>
         </div>
       </footer>
     </article>

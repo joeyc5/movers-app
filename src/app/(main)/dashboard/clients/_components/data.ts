@@ -25,7 +25,6 @@ export interface Client {
   originAddress?: Address;
   destinationAddress?: Address;
   accountOwner: string;
-  accountOwnerId: string | null;
   createdDate: string;
   lastActivityDate: string;
   notes?: string;

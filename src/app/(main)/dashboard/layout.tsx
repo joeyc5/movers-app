@@ -30,14 +30,6 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
   // including one this code has never seen - is treated as a denial,
   // never as permission to render the dashboard.
   const [staff, company] = await Promise.all([getCurrentStaff(), getCurrentCompany()]);
-
-  // A signed-in caller with no staff row anywhere is a self-serve owner who has
-  // not created their company yet. Send them to onboarding to name it, not to
-  // the dead-end unauthorized page.
-  if (!staff && company?.state === "no-membership") {
-    redirect("/onboarding");
-  }
-
   if (!staff || !company || company.state !== "ok") {
     const reason =
       company?.state === "revoked-selection" || company?.state === "no-membership" ? company.state : undefined;
