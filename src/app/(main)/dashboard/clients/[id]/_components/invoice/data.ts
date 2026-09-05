@@ -1,4 +1,10 @@
-import type { InvoiceStatus } from "@/server/queries/invoices";
+import { addDays, format } from "date-fns";
+
+import type { InvoiceDiscountType, InvoiceStatus, InvoiceView } from "@/server/queries/invoices";
+
+export type { InvoiceDiscountType } from "@/server/queries/invoices";
+
+import type { Client } from "../../../_components/data";
 
 /** The scaled paper preview geometry, shared by the preview and print views. */
 export const INVOICE_PAPER_WIDTH = 816;
@@ -90,3 +96,171 @@ export const invoiceStatusMeta: Record<InvoiceStatus, { label: string; badgeClas
     dotClass: "bg-orange-500",
   },
 };
+
+/* The invoice form model and its money math. Restored from the
+ * pre-multi-tenancy module: the live-data pass replaced the persisted
+ * invoice shape here but left the draft-form components importing these. */
+
+const today = new Date();
+
+export interface InvoiceLineItem {
+  id: string;
+  description: string;
+  quantity: number;
+  unitPrice: number;
+}
+
+export interface InvoiceTaxOption {
+  id: string;
+  name: string;
+  rate: number;
+}
+
+export interface InvoiceToDetails {
+  id: string;
+  name: string;
+  email: string;
+  addressLines: string[];
+  taxId?: string;
+}
+
+export interface InvoiceFormValues {
+  referenceNumber: string;
+  issuedDate: string;
+  paymentDueDate: string;
+  from: InvoiceFromDetails;
+  to: InvoiceToDetails;
+  taxId: string;
+  discountType: InvoiceDiscountType;
+  discountValue: number;
+  items: InvoiceLineItem[];
+}
+
+export function clientToInvoiceDetails(client: Client): InvoiceToDetails {
+  const { billingAddress } = client;
+
+  return {
+    id: client.id,
+    name: client.name,
+    email: client.email,
+    addressLines: [billingAddress.street, `${billingAddress.city}, ${billingAddress.state} ${billingAddress.zip}`],
+  };
+}
+
+export function getDefaultInvoiceValues(client: Client, from: InvoiceFromDetails): InvoiceFormValues {
+  return {
+    referenceNumber: `INV-${format(today, "yyyyMMdd")}`,
+    issuedDate: format(today, "yyyy-MM-dd"),
+    paymentDueDate: format(addDays(today, 14), "yyyy-MM-dd"),
+    from,
+    to: clientToInvoiceDetails(client),
+    taxId: invoiceTaxOptions[0].id,
+    discountType: "fixed",
+    discountValue: 0,
+    items: [],
+  };
+}
+
+export const invoiceTaxOptions: InvoiceTaxOption[] = [
+  {
+    id: "ca-sales-tax",
+    name: "CA Sales Tax",
+    rate: 8.75,
+  },
+  {
+    id: "none",
+    name: "No Tax",
+    rate: 0,
+  },
+];
+
+export function getLineAmount(item?: InvoiceLineItem) {
+  if (!item) return 0;
+
+  const quantity = Number.isFinite(item.quantity) ? item.quantity : 0;
+  const unitPrice = Number.isFinite(item.unitPrice) ? item.unitPrice : 0;
+
+  return quantity * unitPrice;
+}
+
+export function getInvoiceItems(invoice: InvoiceFormValues) {
+  return invoice.items;
+}
+
+export function getInvoiceSubtotal(invoice: InvoiceFormValues) {
+  return getInvoiceItems(invoice).reduce((subtotal, item) => subtotal + getLineAmount(item), 0);
+}
+
+export function getInvoiceTaxOption(invoice: InvoiceFormValues) {
+  return invoiceTaxOptions.find((taxOption) => taxOption.id === invoice.taxId) ?? invoiceTaxOptions[0];
+}
+
+export function getInvoiceTax(invoice: InvoiceFormValues) {
+  const taxRate = getInvoiceTaxOption(invoice).rate;
+
+  return Math.max(getInvoiceSubtotal(invoice) - getInvoiceDiscount(invoice), 0) * (taxRate / 100);
+}
+
+export function getInvoiceDiscount(invoice: InvoiceFormValues) {
+  const subtotal = getInvoiceSubtotal(invoice);
+  const discountValue = Number.isFinite(invoice.discountValue) ? invoice.discountValue : 0;
+  const discount = invoice.discountType === "percent" ? subtotal * (discountValue / 100) : discountValue;
+
+  return Math.min(Math.max(discount, 0), subtotal);
+}
+
+export function getInvoiceTotal(invoice: InvoiceFormValues) {
+  return Math.max(getInvoiceSubtotal(invoice) - getInvoiceDiscount(invoice), 0) + getInvoiceTax(invoice);
+}
+
+/**
+ * Render a not-yet-saved invoice through the same paper component the saved
+ * one uses. The draft carries only what the form collects; everything else is
+ * either computed by the money helpers above or genuinely absent until the
+ * invoice is persisted.
+ */
+export function draftInvoiceToView(invoice: InvoiceFormValues): InvoiceView {
+  const [addressLine1 = null, addressLine2 = null] = invoice.to.addressLines;
+  const subtotal = getInvoiceSubtotal(invoice);
+  const discountAmount = getInvoiceDiscount(invoice);
+  const taxOption = getInvoiceTaxOption(invoice);
+  const taxAmount = getInvoiceTax(invoice);
+
+  return {
+    id: "",
+    code: invoice.referenceNumber,
+    clientId: invoice.to.id,
+    dealId: null,
+    quoteId: null,
+    status: "Draft",
+    issuedDate: invoice.issuedDate,
+    paymentDueDate: invoice.paymentDueDate,
+    billToName: invoice.to.name,
+    billToEmail: invoice.to.email || null,
+    billToAddressLine1: addressLine1,
+    billToAddressLine2: addressLine2,
+    customerTaxId: invoice.to.taxId ?? null,
+    taxRateId: taxOption.id,
+    taxRatePercent: taxOption.rate,
+    discountType: invoice.discountType,
+    discountValue: invoice.discountValue,
+    subtotal,
+    discountAmount,
+    taxAmount,
+    totalAmount: getInvoiceTotal(invoice),
+    amountPaid: 0,
+    balanceDue: getInvoiceTotal(invoice),
+    notes: null,
+    issuedByName: null,
+    createdAt: new Date().toISOString(),
+    lineItems: invoice.items.map((item, position) => ({
+      id: item.id,
+      description: item.description,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+      taxable: true,
+      amount: getLineAmount(item),
+      position,
+    })),
+  };
+}
