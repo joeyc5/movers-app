@@ -1,6 +1,11 @@
-import type { StorageAgreementStatus, VaultStatus } from "@/server/queries/warehouse";
+import type { StorageAgreementStatus, StorageCustomerRow, VaultRow, VaultStatus } from "@/server/queries/warehouse";
 
 export type { StorageAgreementStatus, VaultStatus } from "@/server/queries/warehouse";
+
+/** The row shapes the panels and columns render. Aliased so the view layer
+ * never imports from `@/server/queries` directly. */
+export type StorageCustomer = StorageCustomerRow;
+export type Vault = VaultRow;
 
 export const storageStatusOptions: StorageAgreementStatus[] = [
   "Active",
@@ -20,6 +25,22 @@ export const vaultStatusOptions: VaultStatus[] = [
 
 export const storageStatusFilterOptions = ["All", ...storageStatusOptions];
 export const vaultStatusFilterOptions = ["All", ...vaultStatusOptions];
+
+export const storageCustomerFilters = { status: storageStatusFilterOptions };
+export const vaultFilters = { status: vaultStatusFilterOptions };
+
+/** Location options come from the tenant's own warehouse_locations, so a
+ * company with no vaults yet still gets a usable filter. */
+export function locationFilterOptions(locations: string[]) {
+  return ["All", ...locations];
+}
+
+/** occupancyPercent is a generated column in Postgres, so it can never drift
+ * from its two inputs. Reading it here keeps the meter and the database in
+ * agreement. */
+export function getVaultOccupancyPercent(vault: Vault) {
+  return Math.round(vault.occupancyPercent);
+}
 
 export const storageStatusMeta: Record<StorageAgreementStatus, { badgeClass: string; dotClass: string }> = {
   Active: {
