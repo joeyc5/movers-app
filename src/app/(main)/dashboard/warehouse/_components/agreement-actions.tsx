@@ -3,7 +3,7 @@ import * as React from "react";
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { MoreHorizontal, Plus } from "lucide-react";
-import { Controller, useForm } from "react-hook-form";
+import { type Control, Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -52,7 +52,13 @@ const detailSchema = z
   .object({
     status: z.enum(["Active", "Pending Move-In", "Past Due", "Move-Out Scheduled", "Closed"]),
     warehouseLocationId: z.string().min(1, "Choose a location."),
-    monthlyRate: z.coerce.number().min(0, "Rate cannot be negative."),
+    // The form holds this as text: defaults arrive as String(row.monthlyRate)
+    // and submit reads Number(values.monthlyRate). z.coerce.number() typed the
+    // field as unknown, which no input can bind to.
+    monthlyRate: z
+      .string()
+      .refine((v) => v.trim() !== "" && Number.isFinite(Number(v)), "Enter a rate.")
+      .refine((v) => Number(v) >= 0, "Rate cannot be negative."),
     moveInDate: z.string().min(1, "Move-in date is required."),
     nextBillingDate: z.string(),
   })
@@ -72,7 +78,7 @@ function AgreementFields({
   locations,
   idPrefix,
 }: {
-  control: ReturnType<typeof useForm<DetailValues>>["control"];
+  control: Control<DetailValues>;
   locations: WarehouseLocationRow[];
   idPrefix: string;
 }) {
@@ -423,7 +429,13 @@ export function NewAgreementButton({ locations, clients }: { locations: Warehous
                   </Field>
                 )}
               />
-              <AgreementFields control={form.control} locations={locations} idPrefix="new-agreement" />
+              {/* CreateValues is DetailValues plus clientCode, so every field this
+                  component touches is present; Control is not covariant, hence the cast. */}
+              <AgreementFields
+                control={form.control as unknown as Control<DetailValues>}
+                locations={locations}
+                idPrefix="new-agreement"
+              />
             </FieldGroup>
           </div>
           <DialogFooter>
