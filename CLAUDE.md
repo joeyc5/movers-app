@@ -11,7 +11,7 @@ screen-building checklist, and the Biome conventions.
 npm run dev          # sandbox must be disabled, see below
 npm run build        # before calling any web work finished
 npm run check:fix    # biome lint + format; the pre-commit hook runs this
-npm run gen:types    # regenerate src/lib/supabase/database.types.ts
+npm run gen:types    # regenerate src/lib/supabase/database.types.ts; sandbox off, it calls the supabase CLI
 npm run seed:dev     # reseed demo data
 ```
 
