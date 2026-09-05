@@ -2,7 +2,21 @@
 
 Multi-tenant SaaS CRM for movers. Read docs/HANDOFF.md first. It is the
 state of record: what reads live data, what is still static, and the
-landmines already fixed.
+landmines already fixed. `AGENTS.md` holds the co-location structure, the
+screen-building checklist, and the Biome conventions.
+
+## Commands
+
+```bash
+npm run dev          # sandbox must be disabled, see below
+npm run build        # before calling any web work finished
+npm run check:fix    # biome lint + format; the pre-commit hook runs this
+npm run gen:types    # regenerate src/lib/supabase/database.types.ts
+npm run seed:dev     # reseed demo data
+```
+
+There is no test runner. Verification is `npm run build`, the two SQL guards
+below, and a real browser.
 
 - `.env` is tracked on purpose. It holds only public Supabase values and
   Vercel builds read it. Never add `.env*` to .gitignore; the Vercel CLI
@@ -45,3 +59,9 @@ landmines already fixed.
 - `supabase/tests/verify-isolation.sql` proves tenant semantics. Run it
   as one MCP `execute_sql` call (it uses `pg_temp` and `SET LOCAL ROLE`,
   both session-scoped). It rolls back everything it touches.
+- `.design-sync/` syncs `src/components` to the Claude Design project
+  "Movers CRM". Read `.design-sync/NOTES.md` before touching it. Three
+  things there look wrong and are not: `dist/` is a gitignored
+  declarations-only tsc build, `package.json` carries a `"types"` field
+  that only the converter reads, and `biome.json` excludes `.design-sync`
+  because the converter requires PascalCase preview filenames.
