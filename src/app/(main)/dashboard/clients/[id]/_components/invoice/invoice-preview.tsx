@@ -8,7 +8,13 @@ import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
 import { useIsMobile } from "@/hooks/use-mobile";
 
-import { INVOICE_PAPER_HEIGHT, INVOICE_PAPER_SCALE, INVOICE_PAPER_WIDTH, type InvoiceFormValues } from "./data";
+import {
+  draftInvoiceToView,
+  INVOICE_PAPER_HEIGHT,
+  INVOICE_PAPER_SCALE,
+  INVOICE_PAPER_WIDTH,
+  type InvoiceFormValues,
+} from "./data";
 import { InvoicePaper } from "./invoice-paper";
 import { PrintInvoice } from "./print-invoice";
 import { useVisibleCenterPosition } from "./use-visible-center-position";
@@ -62,7 +68,7 @@ export function InvoicePreview({ invoice }: { invoice: InvoiceFormValues }) {
               }}
             >
               <div style={{ transform: `scale(${MOBILE_MIN_SCALE})` }} className="origin-top-left">
-                <InvoicePaper invoice={invoice} />
+                <InvoicePaper invoice={draftInvoiceToView(invoice)} from={invoice.from} />
               </div>
             </div>
           </div>
@@ -94,7 +100,7 @@ export function InvoicePreview({ invoice }: { invoice: InvoiceFormValues }) {
                 style={{ transform: `scale(${paperLayout?.scale ?? INVOICE_PAPER_SCALE})` }}
                 className="origin-top-left"
               >
-                <InvoicePaper invoice={invoice} />
+                <InvoicePaper invoice={draftInvoiceToView(invoice)} from={invoice.from} />
               </div>
             </div>
           </div>

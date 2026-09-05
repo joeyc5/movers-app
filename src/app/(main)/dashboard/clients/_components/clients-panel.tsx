@@ -17,12 +17,22 @@ import { Kbd } from "@/components/ui/kbd";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { dataTableFeatures } from "@/lib/data-table-features";
+import type { AccountOwnerOption } from "@/server/queries/clients";
 
+import { ClientFormSheet } from "./client-form-sheet";
 import { clientsColumns } from "./clients-columns";
 import { ClientsTable } from "./clients-table";
 import { type Client, filters } from "./data";
 
-export function ClientsPanel({ clients }: { clients: Client[] }) {
+export function ClientsPanel({
+  clients,
+  owners,
+  canWrite,
+}: {
+  clients: Client[];
+  owners: AccountOwnerOption[];
+  canWrite: boolean;
+}) {
   // Derived from the rows rather than hardcoded: the owner list is whatever
   // staff actually own accounts, including deactivated ones.
   const ownerOptions = React.useMemo(
@@ -123,9 +133,17 @@ export function ClientsPanel({ clients }: { clients: Client[] }) {
           <Button variant="outline" size="sm">
             <Download /> Export
           </Button>
-          <Button size="sm">
-            <Plus /> Add Client
-          </Button>
+          {canWrite ? (
+            <ClientFormSheet
+              mode="create"
+              owners={owners}
+              trigger={
+                <Button size="sm">
+                  <Plus /> Add Client
+                </Button>
+              }
+            />
+          ) : null}
         </CardAction>
       </CardHeader>
       <CardContent className="flex flex-col gap-4 px-0">

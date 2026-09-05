@@ -2,6 +2,7 @@ import "server-only";
 
 import { cache } from "react";
 
+import { getCurrentStaff } from "@/lib/supabase/auth";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -92,3 +93,91 @@ async function loadEvents(types: CalendarEntityType[]): Promise<CalendarEvent[]>
 
 export const getDispatchEvents = cache(() => loadEvents(["job", "survey"]));
 export const getOfficeEvents = cache(() => loadEvents(["office"]));
+
+// ---------------------------------------------------------------------
+// Options and permissions for the scheduling dialogs.
+// ---------------------------------------------------------------------
+
+export interface StaffOption {
+  id: string;
+  name: string;
+  team: string;
+  active: boolean;
+}
+
+/**
+ * Staff for the estimator and crew selects. Deactivated staff are included and
+ * marked, never dropped: one seeded survey's estimator is Deactivated, and
+ * hiding her would blank the field the moment that event is edited.
+ */
+export const getStaffOptions = cache(async (): Promise<StaffOption[]> => {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("staff")
+    .select("id, full_name, team, status")
+    .order("full_name", { ascending: true });
+
+  if (error) throw new Error(`Failed to load staff: ${error.message}`);
+  return (data ?? []).map((row) => ({
+    id: row.id as string,
+    name: row.full_name as string,
+    team: row.team as string,
+    active: row.status === "Active",
+  }));
+});
+
+export interface WarehouseLocationOption {
+  id: string;
+  name: string;
+}
+
+/** The active facilities, in the dispatch dropdown's own order (Oakland, San Jose, Fremont). */
+export const getWarehouseLocationOptions = cache(async (): Promise<WarehouseLocationOption[]> => {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("warehouse_locations")
+    .select("id, name, sort_order, is_active")
+    .eq("is_active", true)
+    .order("sort_order", { ascending: true });
+
+  if (error) throw new Error(`Failed to load warehouse locations: ${error.message}`);
+  return (data ?? []).map((row) => ({ id: row.id as string, name: row.name as string }));
+});
+
+/**
+ * The current company's IANA timezone, used to turn a wall-clock time typed into
+ * the dialog into a real instant. companies_select scopes the read to the
+ * caller's own company, so an unfiltered select returns exactly that one row.
+ * Falls back to the column default rather than throwing on a silent zero-row read.
+ */
+export const getCompanyTimezone = cache(async (): Promise<string> => {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("companies").select("timezone").maybeSingle();
+  if (error || !data?.timezone) return "America/Los_Angeles";
+  return data.timezone;
+});
+
+/**
+ * Mirrors app.has_any_perm(['calendar','dispatch','jobs'], true) read-side, so the
+ * page omits write affordances the database would reject. RLS is the enforcement;
+ * this only decides what to render. Same shape as canWriteQuotes in queries/quotes.ts.
+ */
+export const canWriteCalendar = cache(async (): Promise<boolean> => {
+  const staff = await getCurrentStaff();
+  if (!staff || staff.status !== "Active") return false;
+
+  const level = staff.role?.access_level;
+  if (level === "Read only") return false;
+  if (level === "Full") return true;
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("role_permission_sets")
+    .select("permission_set:permission_set_id!inner ( slug )")
+    .eq("role_id", staff.role_id)
+    .in("permission_set.slug", ["calendar", "dispatch", "jobs"])
+    .limit(1);
+
+  if (error) return false;
+  return (data ?? []).length > 0;
+});

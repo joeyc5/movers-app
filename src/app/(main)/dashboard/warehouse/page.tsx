@@ -1,10 +1,17 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { getStorageCustomers, getVaults, getWarehouseLocations } from "@/server/queries/warehouse";
 
-import { storageCustomers, vaults } from "./_components/data";
 import { StorageCustomersPanel } from "./_components/storage-customers-panel";
 import { VaultsPanel } from "./_components/vaults-panel";
 
-export default function Page() {
+export default async function Page() {
+  const [storageCustomers, vaults, warehouseLocations] = await Promise.all([
+    getStorageCustomers(),
+    getVaults(),
+    getWarehouseLocations(),
+  ]);
+  const locations = warehouseLocations.map((location) => location.name);
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-0.5">
@@ -19,11 +26,11 @@ export default function Page() {
         </TabsList>
 
         <TabsContent className="pt-4" value="storage-customers">
-          <StorageCustomersPanel storageCustomers={storageCustomers} />
+          <StorageCustomersPanel storageCustomers={storageCustomers} locations={locations} />
         </TabsContent>
 
         <TabsContent className="pt-4" value="vaults">
-          <VaultsPanel vaults={vaults} />
+          <VaultsPanel vaults={vaults} locations={locations} />
         </TabsContent>
       </Tabs>
     </div>

@@ -4,7 +4,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.17";
+    PostgrestVersion: "14.5";
   };
   public: {
     Tables: {
@@ -2192,8 +2192,17 @@ export type Database = {
           state: string;
         }[];
       };
+      next_client_code: { Args: never; Returns: string };
+      next_deal_code: { Args: never; Returns: string };
+      next_event_code: { Args: { p_kind: string }; Returns: string };
       next_invoice_code: { Args: never; Returns: string };
       next_quote_code: { Args: never; Returns: string };
+      next_storage_code: { Args: never; Returns: string };
+      next_vault_code: { Args: never; Returns: string };
+      signup_create_company: {
+        Args: { p_name: string; p_slug: string };
+        Returns: string;
+      };
     };
     Enums: {
       [_ in never]: never;

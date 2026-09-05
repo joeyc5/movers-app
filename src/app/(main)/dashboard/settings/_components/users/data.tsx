@@ -13,6 +13,8 @@ const teamValues = [
 
 export type UserTeam = (typeof teamValues)[number];
 
+import type { StaffMember } from "@/server/queries/staff";
+
 export type UserRow = {
   email: string;
   joinedDate: string;
@@ -317,3 +319,34 @@ export const statusMeta: Record<UserStatus, { badgeClass: string; dotClass: stri
     dotClass: "bg-orange-500",
   },
 };
+
+/**
+ * Adapt a live staff row to the shape this table renders. Status and team are
+ * free text in the database; anything outside the table's own vocabulary falls
+ * back to a value it can style. Location has no column behind it, so it comes
+ * back empty and the panel hides that column.
+ */
+export function staffToUserRow(member: StaffMember): UserRow {
+  const status = (["Active", "Pending invite", "Deactivated", "Locked", "Suspended"] as const).find(
+    (value) => value === member.status,
+  );
+  const team = teamValues.find((value) => value === member.team);
+  const lastActiveMinutes = member.lastActiveAt
+    ? Math.max(0, Math.round((Date.now() - new Date(member.lastActiveAt).getTime()) / 60_000))
+    : Number.POSITIVE_INFINITY;
+
+  return {
+    name: member.fullName,
+    email: member.workEmail,
+    role: member.roleName,
+    status: status ?? "Active",
+    team: team ?? "Dispatch",
+    location: [],
+    joinedDate: new Date(member.joinedAt).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    }),
+    lastActive: lastActiveMinutes,
+  };
+}
