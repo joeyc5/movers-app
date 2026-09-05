@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { getCurrentCompany, requireAuth } from "@/lib/supabase/auth";
+import type { TablesUpdate } from "@/lib/supabase/database.types";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentStaffAccess } from "@/server/queries/staff";
 
@@ -46,7 +47,7 @@ export async function updateCompanyBillingProfile(input: z.infer<typeof schema>)
   const company = await getCurrentCompany();
   if (!company?.company_id) return { error: "Your company could not be resolved." };
 
-  const update: Record<string, string> = {
+  const update: TablesUpdate<"company_billing_profile"> = {
     name: d.name,
     email: d.email,
     phone: d.phone,

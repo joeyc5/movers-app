@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { getCurrentStaff, requireAuth } from "@/lib/supabase/auth";
+import type { TablesUpdate } from "@/lib/supabase/database.types";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -20,12 +21,14 @@ export type CreateInvoiceResult = { code: string } | { error: string };
 
 const detailPath = (clientCode: string) => `/dashboard/clients/${clientCode}`;
 
-function failure(prefix: string, message: string): InvoiceActionResult {
+/** Always an error, so the result is usable by both the void-returning
+ * actions and createInvoice, whose success arm carries a code. */
+function failure(prefix: string, message: string): { error: string } {
   return { error: `${prefix}: ${message}` };
 }
 
 /** Maps a Postgres constraint or RLS denial to copy a person can act on. */
-function mapWriteError(prefix: string, error: { code?: string; message: string }): InvoiceActionResult {
+function mapWriteError(prefix: string, error: { code?: string; message: string }): { error: string } {
   if (error.code === "42501" || error.code === "PGRST301") {
     return failure(prefix, "your role cannot change invoices.");
   }
@@ -289,7 +292,7 @@ export async function updateInvoiceDraft(input: z.input<typeof draftPatchSchema>
   const patch = parsed.data;
 
   const supabase = await createClient();
-  const update: Record<string, unknown> = {};
+  const update: TablesUpdate<"invoices"> = {};
 
   if (patch.billToName !== undefined) update.bill_to_name = patch.billToName;
   if (patch.billToEmail !== undefined) update.bill_to_email = patch.billToEmail || null;
@@ -375,7 +378,7 @@ export async function updateInvoiceLineItem(input: z.input<typeof lineItemPatchS
   if (!parsed.success) return failure("Could not save the item", "the request was malformed.");
   const patch = parsed.data;
 
-  const update: Record<string, unknown> = {};
+  const update: TablesUpdate<"invoice_line_items"> = {};
   if (patch.description !== undefined) update.description = patch.description;
   if (patch.quantity !== undefined) update.quantity = patch.quantity;
   if (patch.unitPrice !== undefined) update.unit_price = patch.unitPrice;

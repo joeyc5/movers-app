@@ -80,7 +80,11 @@ export const getDocuments = cache(async (): Promise<DocumentItem[]> => {
   const currentStaffId = staff?.id ?? null;
   const starred = new Set((starsResult.data ?? []).map((row) => row.document_id));
 
-  return (documentsResult.data as DocumentRow[]).map((row) => {
+  // documents has two FKs to staff (owner_staff_id and staff_id), so the embed
+  // carries the constraint-name hint the query needs. supabase gen types cannot
+  // resolve that hint and types the embed as SelectQueryError, which no direct
+  // cast can bridge; the shape is asserted here instead.
+  return (documentsResult.data as unknown as DocumentRow[]).map((row) => {
     const name = ownerName(row.owner);
     return {
       id: row.id,
