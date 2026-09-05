@@ -74,9 +74,6 @@
       "primaryStory": "OnRow"
     }
   },
-  "extraEntries": [
-    "recharts"
-  ],
   "componentSrcMap": {
     "AccordionContent": null,
     "AccordionItem": null,

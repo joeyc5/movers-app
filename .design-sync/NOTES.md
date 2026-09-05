@@ -102,16 +102,6 @@ app chrome and are deliberately not shipped.
   `PKG_DIR` a symlinked path, `isOwnProp` prefix-matching fails against the
   realpath'd `dist/` files, and every prop body comes out empty.
 
-## Recharts is merged onto the global on purpose
-
-`cfg.extraEntries: ["recharts"]`. `ChartContainer` wraps Recharts'
-`ResponsiveContainer`, which only recognizes chart children from its own module
-instance. A preview importing `BarChart` straight from `recharts` gets a second
-copy and the chart renders as an empty box — no error, just nothing. The
-extraEntry puts Recharts' exports on `window.MoversCRM` so the preview and the
-bundled container share one instance. Bare package names work here; a
-repo-relative path does not (see the calendar note below).
-
 ## Known render warns
 
 Triaged and expected. A warn that is not on this list is new.
@@ -136,6 +126,14 @@ Triaged and expected. A warn that is not on this list is new.
   same string against `ds-bundle/`, and no single value satisfies both. The
   component is fully importable, and its doc carries working usage code with
   the plugin requirement spelled out. Do not spend another build on this.
+- **`ChartContainer` ships the floor card too.** Same dual-instance problem as
+  the calendar: `ResponsiveContainer` only recognizes chart children from its
+  own Recharts instance, and a preview importing `BarChart` from `recharts`
+  gets a second copy and draws an empty box with no error. `cfg.extraEntries:
+  ["recharts"]` is the documented fix and it does merge the exports, but it
+  also wedged esbuild — the bundle step stopped making progress at 0% CPU
+  across three clean restarts. Backed out. The doc carries the full working
+  chart example.
 - **`ContextMenu` shows only its trigger.** A right-click cannot be simulated
   in a static render, so the card shows the drop zone and the menu content
   stays closed. That is the honest state, not a break.

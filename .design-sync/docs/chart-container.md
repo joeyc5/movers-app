@@ -2,13 +2,19 @@
 category: Data
 ---
 
-The Recharts wrapper that gives a chart the design system's colors, tooltip, and legend. Pass a `config` keyed by series name; each key becomes a `--color-<key>` CSS variable you reference from the series `fill` or `stroke`.
+The Recharts wrapper that gives a chart the design system's colors, tooltip,
+and legend. Pass a `config` keyed by series name; each key becomes a
+`--color-<key>` CSS variable you reference from the series `fill` or `stroke`.
 
-`ChartTooltip` needs `content={<ChartTooltipContent />}` to render the styled tooltip.
+`ChartTooltip` needs `content={<ChartTooltipContent />}` to render the styled
+tooltip. Set `initialDimension` when the chart renders before its container has
+been measured.
 
-## Parts
-
-Composed with `ChartLegend`, `ChartLegendContent`, `ChartStyle`, `ChartTooltip`, `ChartTooltipContent`. Every part is a named export on `window.MoversCRM`.
+Its preview card is the typographic floor card, not a render. `ChartContainer`
+wraps Recharts' `ResponsiveContainer`, which only recognizes chart children
+from its own module instance, and a preview that imports `BarChart` separately
+gets a second copy and draws an empty box. In an app both come from the same
+install and the chart renders normally.
 
 ## Examples
 
@@ -51,3 +57,7 @@ export function DealsByMonth() {
   );
 }
 ```
+
+## Parts
+
+Composed with `ChartLegend`, `ChartLegendContent`, `ChartStyle`, `ChartTooltip`, `ChartTooltipContent`. Every part is a named export on `window.MoversCRM`.
