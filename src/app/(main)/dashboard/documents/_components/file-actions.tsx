@@ -10,10 +10,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-import type { FileManagerFile } from "./data";
+import type { DocumentItem } from "./data";
 
 interface FileActionsProps {
-  file: FileManagerFile;
+  file: DocumentItem;
   onToggleStar: () => void;
 }
 
