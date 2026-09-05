@@ -129,18 +129,20 @@ than a false pass because no invoice data exists yet.
 
 ## Open items
 
-- **D21, unresolved.** `company_billing_profile`'s read policy is broad enough
-  to expose `routing_number`. The fix is splitting the banking columns into
-  their own narrower-grant table. The Settings UI only shows those fields to
-  a Full-access caller, but that is a UI gate, not a database one.
-- **47 missing covering indexes.** `0015_constraints.sql` converted 48
-  single-column foreign keys to composite `(company_id, X)` keys; 47 have no
-  composite covering index, only whatever single-column index predated them,
-  which no longer covers a two-column FK. The 48th,
-  `crew_rates_rate_card_id_fkey`, is covered by `crew_rates_company_card_crew_key`.
-  Costs nothing measurable at current size, but every parent-row `UPDATE` or
-  `DELETE` will sequentially scan the child table once real data exists. Add
-  `create index ... on <table> (company_id, <fk_column>)` per FK.
+- **D21 needs a product decision, not a patch.** `company_billing_profile`
+  grants column-level `SELECT` on `payment_account_name` and `routing_number`
+  to `authenticated`, and its select policy is `app.is_active_staff()`, so any
+  active staff member in the tenant can read them. Writes are already gated on
+  `has_perm('settings')`; only reads are broad.
+
+  The obvious fix, revoking those two columns from `authenticated`, breaks
+  invoicing: `invoice-paper.tsx:37` prints `Routing no.` on every invoice, so
+  anyone who can render an invoice needs the value. There is no account-number
+  column, and a routing number appears on every cheque the company writes, so
+  the exposure is narrower than the original note implied. Deciding between
+  leaving it, moving the render behind a SECURITY DEFINER call, or splitting
+  the columns into a narrower-grant table is a call about who may see the
+  remittance block, not a defect with one correct fix.
 - **Leaked-password protection is disabled.** Enable it in Auth settings
   before the app carries anything real.
 - **No document bytes exist.** `npm run seed:documents` has never run; it

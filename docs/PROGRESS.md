@@ -24,6 +24,9 @@ all seven expected probes.
 
 Patched `fast-uri` and `qs` for five Dependabot alerts.
 
+Added `0026`, the 47 composite foreign-key covering indexes `0015` never
+created. Generated from `pg_constraint`, applied, verified 0 of 48 missing.
+
 ## 2026-09-02 — Working pages
 
 Nine parallel streams moved Clients, Sales, Calendar, Warehouse, Documents,
