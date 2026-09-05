@@ -18,18 +18,32 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectVa
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { dataTableFeatures } from "@/lib/data-table-features";
+import type { StaffMember } from "@/server/queries/staff";
 
-import { filters, type UserRow } from "./data";
+import { filters, staffToUserRow } from "./data";
 import { usersColumns } from "./users-columns";
 import { UsersTable } from "./users-table";
 
-export function UsersPanel({ users }: { users: UserRow[] }) {
+export function UsersPanel({
+  staff,
+  roleOptions,
+  canManageUsers,
+  currentStaffId,
+}: {
+  staff: StaffMember[];
+  roleOptions: { slug: string; name: string }[];
+  canManageUsers: boolean;
+  currentStaffId: string | null;
+}) {
+  const users = React.useMemo(() => staff.map(staffToUserRow), [staff]);
   const [rowSelection, setRowSelection] = React.useState({});
   const [sorting, setSorting] = React.useState<SortingState>([{ id: "joinedDate", desc: true }]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = React.useState<ColumnVisibilityState>({
     search: false,
     team: false,
+    // No column behind it in the live schema.
+    location: false,
   });
   const [pagination, setPagination] = React.useState<PaginationState>({
     pageIndex: 0,
