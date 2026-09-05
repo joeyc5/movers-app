@@ -50,12 +50,28 @@ below, and a real browser.
 - Deleting from `storage.objects` needs `storage.allow_delete_query` set
   first. Supabase's `storage.protect_delete()` trigger blocks a plain
   `DELETE` on that table even as `postgres`.
+- Applying a migration: `supabase link --project-ref jannhzvqrsumtscidtkx`
+  once, then `supabase db query --linked -f <path.sql>`. The same command runs
+  the guards and the tests. Sandbox off, like every supabase call.
 - Run both guards after any migration: `9999_security_guard.sql` (access
   control shape) and `0021_tenancy_guard.sql` (tenancy shape). Neither is
   optional; each catches a class of regression the other cannot.
+- `supabase migration list --linked` cannot tell you what is applied here.
+  Local files are `0001`-`9999`; the remote was applied through the MCP under
+  timestamp names, so the two columns never line up and every migration reads
+  as pending. To know whether something is really applied, query the object:
+  `select conname from pg_constraint where conrelid = 'public.x'::regclass`,
+  or `pg_proc` for a function. 0024 and 0025 sat unapplied for a week behind
+  this; five features were broken in production and nothing caught it.
+- `npm run gen:types` is a truth oracle. If a function or table vanishes from
+  the regenerated file, it is missing from the live database. Diff the
+  `Functions:` block against git before assuming the tool misbehaved.
 - PostgREST embed hints on composite FKs must use constraint-name form
   (`deals!deals_client_id_fkey(...)`), not column-name form. Column-name
-  hints break against composite FKs and return PGRST200.
+  hints break against composite FKs and return PGRST200. `supabase gen types`
+  cannot resolve the hint either: it types the embed as `SelectQueryError`, so
+  a correct query still needs `as unknown as Row[]`. The cast is the fix; the
+  query is not wrong.
 - `supabase/tests/verify-isolation.sql` proves tenant semantics. Run it
   as one MCP `execute_sql` call (it uses `pg_temp` and `SET LOCAL ROLE`,
   both session-scoped). It rolls back everything it touches.
