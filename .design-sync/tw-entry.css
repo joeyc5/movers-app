@@ -1,0 +1,43 @@
+/* design-sync Tailwind compile entry.
+   Compiles the app's real stylesheet (tokens, presets, base layer) plus every
+   utility class used by the components and the authored preview cards.
+   Regenerate with the command in .design-sync/NOTES.md. */
+@import "../src/app/globals.css";
+
+@source "../src/components/**/*.tsx";
+@source "../src/components/**/*.ts";
+@source "../src/app/**/*.tsx";
+@source "../src/navigation/**/*.tsx";
+@source "./previews/**/*.tsx";
+
+/* next/font injects these at runtime in the app. The design bundle ships the
+   Geist family itself (see fonts.css), so the default --font-sans resolves. */
+:root {
+  --font-geist: "Geist", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-geist-mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+
+/* The design agent writes its own layout markup, so the bundle has to carry
+   more than the utilities this repo happens to use today. Everything below is
+   the token-backed vocabulary the conventions header promises, plus the
+   layout and type scale a screen needs. */
+@source inline("{bg,text,border,ring,divide}-{background,foreground,card,card-foreground,popover,popover-foreground,primary,primary-foreground,secondary,secondary-foreground,muted,muted-foreground,accent,accent-foreground,destructive,border,input,ring,sidebar,sidebar-foreground,sidebar-accent,sidebar-border}");
+@source inline("{,sm:,md:,lg:}{flex,inline-flex,grid,inline-grid,block,inline-block,hidden,contents}");
+@source inline("{,sm:,md:,lg:}flex-{row,col,wrap,nowrap,1,auto,none,initial}");
+@source inline("{,sm:,md:,lg:}items-{start,center,end,baseline,stretch}");
+@source inline("{,sm:,md:,lg:}justify-{start,center,end,between,around,evenly}");
+@source inline("{,sm:,md:,lg:}grid-cols-{1,2,3,4,5,6,12}");
+@source inline("{,sm:,md:,lg:}col-span-{1,2,3,4,5,6,full}");
+@source inline("{,sm:,md:,lg:}{gap,gap-x,gap-y}-{0,0.5,1,1.5,2,2.5,3,4,5,6,8,10,12}");
+@source inline("{,sm:,md:,lg:}{p,px,py,pt,pr,pb,pl}-{0,0.5,1,1.5,2,2.5,3,4,5,6,8,10,12,16}");
+@source inline("{,sm:,md:,lg:}{m,mx,my,mt,mr,mb,ml}-{0,1,2,3,4,6,8,auto}");
+@source inline("{,sm:,md:,lg:}space-{x,y}-{1,2,3,4,6}");
+@source inline("{,sm:,md:,lg:}{w,h,size}-{full,auto,fit,screen,4,5,6,8,10,12,16,20,24}");
+@source inline("{,sm:,md:,lg:}max-w-{xs,sm,md,lg,xl,2xl,3xl,4xl,5xl,6xl,7xl,full,none,prose}");
+@source inline("{,sm:,md:,lg:}min-{h,w}-{0,full,screen}");
+@source inline("{,sm:,md:,lg:}text-{xs,sm,base,lg,xl,2xl,3xl,4xl}");
+@source inline("{,sm:,md:,lg:}text-{left,center,right}");
+@source inline("font-{normal,medium,semibold,bold,sans,mono,heading}");
+@source inline("{rounded,rounded-t,rounded-b,rounded-l,rounded-r}-{none,sm,md,lg,xl,2xl,3xl,full}");
+@source inline("{,hover:,focus:}shadow-{none,2xs,xs,sm,md,lg,xl}");
+@source inline("{truncate,tabular-nums,uppercase,capitalize,tracking-tight,tracking-wide,leading-none,leading-tight,leading-relaxed,antialiased,sr-only,overflow-hidden,overflow-auto,relative,absolute,sticky,fixed,shrink-0,grow,border,border-0,border-t,border-b,border-l,border-r}");
