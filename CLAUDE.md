@@ -1,9 +1,10 @@
 # movers-app
 
-Multi-tenant SaaS CRM for movers. Read docs/HANDOFF.md first. It is the
-state of record: what reads live data, what is still static, and the
-landmines already fixed. `AGENTS.md` holds the co-location structure, the
-screen-building checklist, and the Biome conventions.
+Multi-tenant SaaS CRM for movers. `docs/TENANCY.md` is what the database
+guarantees, how to re-prove it, and what is still open. `AGENTS.md` holds the
+co-location structure, the screen-building checklist, and the Biome
+conventions. `docs/PROGRESS.md` logs what shipped and when; `docs/archive/`
+holds completed plans, none of them current.
 
 ## Commands
 
@@ -27,9 +28,14 @@ below, and a real browser.
   No dashboard env vars by design.
 - Tables are TanStack Table v9 (`useTable`, `table.FlexRender`). v8 idioms
   do not compile, and row-level visibility caches go stale after
-  `columnVisibility` changes (see HANDOFF landmines).
+  `columnVisibility` changes.
 - Mobile verification: chrome-devtools `emulate` with `390x844x2,mobile,touch`.
-  `resize_page` cannot go below about 500px and lies about 390.
+  `resize_page` cannot go below about 500px and lies about 390. The Next
+  dev-tools badge at 390px is not a layout bug; it does not exist in
+  production builds.
+- The dashboard layout's content wrapper uses `overflow-x-clip`, not
+  `overflow-x-hidden`. The latter silently kills `position:sticky` for every
+  descendant.
 - `npm run dev`, `npm run build`, and `git push` need the Bash sandbox
   disabled here (port bind EPERM, stalled build, SSH broken pipe). So does
   every `supabase` CLI call: sandboxed it dies on `EPERM` writing

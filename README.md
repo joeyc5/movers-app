@@ -46,6 +46,7 @@ npm run gen:types
 
 ## Read next
 
-- `docs/HANDOFF.md` is the state of record: what reads live data, what is
-  still static, and the landmines already fixed.
+- `docs/TENANCY.md` is what the database guarantees, how to re-prove it, and
+  what is still open.
+- `docs/PROGRESS.md` logs what shipped and when.
 - `CLAUDE.md` holds the operational rules for working in this repo.

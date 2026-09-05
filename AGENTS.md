@@ -2,7 +2,7 @@
 
 ## Project overview
 
-movers-app is a multi-tenant SaaS CRM for moving companies, built with Next.js 16, React 19, TypeScript, Tailwind CSS v4, shadcn/ui, and Supabase. `CLAUDE.md` holds the operational rules and landmines; `docs/HANDOFF.md` is the state of record.
+movers-app is a multi-tenant SaaS CRM for moving companies, built with Next.js 16, React 19, TypeScript, Tailwind CSS v4, shadcn/ui, and Supabase. `CLAUDE.md` holds the operational rules and landmines; `docs/TENANCY.md` covers what the database guarantees.
 
 This repository uses the shadcn `radix-nova` style. The shadcn CLI reports `base: "radix"`, which refers to Radix UI. Always inspect the local components in `src/components/ui/` because individual wrappers may use different primitives.
 
