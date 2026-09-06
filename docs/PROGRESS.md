@@ -27,6 +27,10 @@ Patched `fast-uri` and `qs` for five Dependabot alerts.
 Added `0026`, the 47 composite foreign-key covering indexes `0015` never
 created. Generated from `pg_constraint`, applied, verified 0 of 48 missing.
 
+Moved Calendar onto `getDispatchEvents` and `getOfficeEvents` and deleted its
+fixture module, so no screen reads static arrays now. Wired the Settings Add
+User button to a new invite sheet over the existing `inviteStaff` action.
+
 ## 2026-09-02 — Working pages
 
 Nine parallel streams moved Clients, Sales, Calendar, Warehouse, Documents,
@@ -35,8 +39,7 @@ onto live tenant-scoped reads. Shipped as `c33c2e0`, reverted, reapplied as
 `b8dba25`.
 
 The reapply landed consumers whose data modules had changed shape, which is
-the drift the 2026-09-05 session repaired. Calendar is the one screen that
-still reads static arrays.
+the drift the 2026-09-05 session repaired.
 
 ## 2026-08-27 to 08-28 — Multi-tenancy retrofit
 
