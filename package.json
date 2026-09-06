@@ -2,6 +2,7 @@
   "name": "movers-crm",
   "version": "2.2.0",
   "private": true,
+  "types": "./dist/index.d.ts",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

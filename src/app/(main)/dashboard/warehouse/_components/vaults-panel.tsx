@@ -13,7 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useIsMobile } from "@/hooks/use-mobile";
 import { type DataTableFeatures, dataTableFeatures } from "@/lib/data-table-features";
 
-import { type Vault, vaultFilters } from "./data";
+import { locationFilterOptions, type Vault, vaultFilters } from "./data";
 import { vaultsColumns } from "./vaults-columns";
 
 type VaultRow = Row<DataTableFeatures, Vault>;
@@ -33,7 +33,8 @@ function groupRowsByRack(rows: VaultRow[]) {
   }, []);
 }
 
-export function VaultsPanel({ vaults }: { vaults: Vault[] }) {
+export function VaultsPanel({ vaults, locations }: { vaults: Vault[]; locations: string[] }) {
+  const locationOptions = React.useMemo(() => locationFilterOptions(locations), [locations]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = React.useState<ColumnVisibilityState>({
     search: false,
@@ -67,7 +68,7 @@ export function VaultsPanel({ vaults }: { vaults: Vault[] }) {
   const searchQuery = (table.getColumn("search")?.getFilterValue() as string | undefined) ?? "";
   const statusFilter = (table.getColumn("status")?.getFilterValue() as string | undefined) ?? vaultFilters.status[0];
   const locationFilter =
-    (table.getColumn("warehouseLocation")?.getFilterValue() as string | undefined) ?? vaultFilters.location[0];
+    (table.getColumn("warehouseLocation")?.getFilterValue() as string | undefined) ?? locationOptions[0];
 
   const rows = table.getRowModel().rows;
   const groupedRows = groupRowsByRack(rows);
@@ -128,7 +129,7 @@ export function VaultsPanel({ vaults }: { vaults: Vault[] }) {
             </SelectTrigger>
             <SelectContent position="popper" align="start">
               <SelectGroup>
-                {vaultFilters.location.map((option) => (
+                {locationOptions.map((option) => (
                   <SelectItem key={option} value={option}>
                     {option}
                   </SelectItem>

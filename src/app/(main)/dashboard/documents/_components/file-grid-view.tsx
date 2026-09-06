@@ -8,11 +8,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
-import { type FileManagerFile, fileIcons, fileKindLabels } from "./data";
+import { type DocumentItem, fileIcons, fileKindLabels } from "./data";
 import { FileActions } from "./file-actions";
 
 interface FileGridViewProps {
-  files: FileManagerFile[];
+  files: DocumentItem[];
 }
 
 export function FileGridView({ files }: FileGridViewProps) {
@@ -46,14 +46,13 @@ export function FileGridView({ files }: FileGridViewProps) {
                 </Button>
                 <div className="absolute inset-x-3 bottom-3 flex items-center justify-between gap-3 text-muted-foreground text-xs">
                   <span>{fileKindLabels[file.kind]}</span>
-                  <span>{file.size}</span>
                 </div>
               </div>
             </CardContent>
             <CardHeader>
               <CardTitle className="truncate">{file.name}</CardTitle>
               <CardDescription className="truncate">
-                Modified {file.modifiedAt} by {file.owner}
+                Modified {file.modifiedAt} by {file.ownerName}
               </CardDescription>
               <CardAction>
                 <FileActions file={file} onToggleStar={() => toggleStar(file.id)} />

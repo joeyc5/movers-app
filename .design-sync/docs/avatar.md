@@ -1,0 +1,51 @@
+---
+category: Data
+---
+
+A person or account image with a text fallback. Always supply `AvatarFallback`; the image can fail to load.
+
+`AvatarGroup` overlaps several avatars and `AvatarGroupCount` closes the row with an overflow count.
+
+## Parts
+
+Composed with `AvatarBadge`, `AvatarFallback`, `AvatarGroup`, `AvatarGroupCount`, `AvatarImage`. Every part is a named export on `window.MoversCRM`.
+
+## Examples
+
+```tsx
+import { Avatar, AvatarBadge, AvatarFallback, AvatarGroup, AvatarGroupCount } from "@/components/ui/avatar";
+
+export function Fallbacks() {
+  return (
+    <div className="flex items-center gap-3">
+      <Avatar>
+        <AvatarFallback>DR</AvatarFallback>
+      </Avatar>
+      <Avatar>
+        <AvatarFallback>KI</AvatarFallback>
+        <AvatarBadge className="bg-emerald-500" />
+      </Avatar>
+      <Avatar className="size-12">
+        <AvatarFallback>PO</AvatarFallback>
+      </Avatar>
+    </div>
+  );
+}
+
+export function Group() {
+  return (
+    <AvatarGroup>
+      <Avatar>
+        <AvatarFallback>DR</AvatarFallback>
+      </Avatar>
+      <Avatar>
+        <AvatarFallback>KI</AvatarFallback>
+      </Avatar>
+      <Avatar>
+        <AvatarFallback>PO</AvatarFallback>
+      </Avatar>
+      <AvatarGroupCount>+3</AvatarGroupCount>
+    </AvatarGroup>
+  );
+}
+```

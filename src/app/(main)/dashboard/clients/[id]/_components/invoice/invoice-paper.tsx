@@ -1,22 +1,12 @@
 import { formatCurrency } from "@/lib/utils";
+import type { InvoiceView } from "@/server/queries/invoices";
 
-import {
-  getInvoiceDiscount,
-  getInvoiceItems,
-  getInvoiceSubtotal,
-  getInvoiceTax,
-  getInvoiceTaxOption,
-  getInvoiceTotal,
-  getLineAmount,
-  INVOICE_PAPER_HEIGHT,
-  INVOICE_PAPER_WIDTH,
-  type InvoiceFormValues,
-} from "./data";
+import { INVOICE_PAPER_HEIGHT, INVOICE_PAPER_WIDTH, type InvoiceFromDetails } from "./data";
 
-export function InvoicePaper({ invoice }: { invoice: InvoiceFormValues }) {
-  const taxOption = getInvoiceTaxOption(invoice);
-  const discountValue = Number.isFinite(invoice.discountValue) ? invoice.discountValue : 0;
-  const discountLabel = invoice.discountType === "percent" ? `Discount ${discountValue}%` : "Discount";
+export function InvoicePaper({ invoice, from }: { invoice: InvoiceView; from: InvoiceFromDetails }) {
+  const discountLabel = invoice.discountType === "percent" ? `Discount ${invoice.discountValue}%` : "Discount";
+  const billToAddress = [invoice.billToAddressLine1, invoice.billToAddressLine2].filter(Boolean) as string[];
+  const issuedBy = invoice.issuedByName ?? from.issuerName;
 
   return (
     <article
@@ -37,33 +27,33 @@ export function InvoicePaper({ invoice }: { invoice: InvoiceFormValues }) {
 
         <section className="grid grid-cols-2 gap-14 text-sm leading-relaxed">
           <div>
-            <p>Reference: {invoice.referenceNumber}</p>
+            <p>Reference: {invoice.code}</p>
             <p>Issued: {invoice.issuedDate}</p>
             <p>Payment due: {invoice.paymentDueDate}</p>
           </div>
           <div>
             <p>Payment account</p>
-            <p>{invoice.from.paymentAccountName}</p>
-            <p>Routing no. {invoice.from.routingNumber}</p>
+            <p>{from.paymentAccountName}</p>
+            <p>Routing no. {from.routingNumber}</p>
           </div>
         </section>
 
         <section className="grid grid-cols-2 gap-14 text-sm leading-relaxed">
           <div>
             <p className="mb-4 font-semibold uppercase">From</p>
-            <p>{invoice.from.name}</p>
-            {invoice.from.addressLines.map((line) => (
+            <p>{from.name}</p>
+            {from.addressLines.map((line) => (
               <p key={line}>{line}</p>
             ))}
-            <p>Tax ID: {invoice.from.taxId}</p>
+            <p>Tax ID: {from.taxId}</p>
           </div>
           <div>
             <p className="mb-4 font-semibold uppercase">Bill to</p>
-            <p>{invoice.to.name}</p>
-            {invoice.to.addressLines.map((line) => (
+            <p>{invoice.billToName}</p>
+            {billToAddress.map((line) => (
               <p key={line}>{line}</p>
             ))}
-            {invoice.to.taxId ? <p>Tax ID: {invoice.to.taxId}</p> : null}
+            {invoice.customerTaxId ? <p>Tax ID: {invoice.customerTaxId}</p> : null}
           </div>
         </section>
       </header>
@@ -76,15 +66,15 @@ export function InvoicePaper({ invoice }: { invoice: InvoiceFormValues }) {
             <span className="text-right">Unit cost</span>
             <span className="text-right">Line total</span>
           </div>
-          {getInvoiceItems(invoice).map((item) => (
+          {invoice.lineItems.map((item) => (
             <div
               key={item.id}
               className="grid grid-cols-[1fr_74px_116px_116px] border-[oklch(0.86_0_0)] border-b px-3 py-4"
             >
-              <span>{item.description}</span>
+              <span>{item.description || "Item"}</span>
               <span className="text-right">{item.quantity}</span>
               <span className="text-right">{formatInvoiceCurrency(item.unitPrice)}</span>
-              <span className="text-right">{formatInvoiceCurrency(getLineAmount(item))}</span>
+              <span className="text-right">{formatInvoiceCurrency(item.amount)}</span>
             </div>
           ))}
         </section>
@@ -94,23 +84,21 @@ export function InvoicePaper({ invoice }: { invoice: InvoiceFormValues }) {
             <div>
               <div className="flex justify-between gap-8">
                 <span>Net amount</span>
-                <span>{formatInvoiceCurrency(getInvoiceSubtotal(invoice))}</span>
+                <span>{formatInvoiceCurrency(invoice.subtotal)}</span>
               </div>
               <div className="flex justify-between gap-8">
                 <span>{discountLabel}</span>
-                <span>{formatInvoiceCurrency(getInvoiceDiscount(invoice))}</span>
+                <span>{formatInvoiceCurrency(invoice.discountAmount)}</span>
               </div>
               <div className="flex justify-between gap-8">
-                <span>
-                  {taxOption.name} {taxOption.rate}%
-                </span>
-                <span>{formatInvoiceCurrency(getInvoiceTax(invoice))}</span>
+                <span>Tax {invoice.taxRatePercent}%</span>
+                <span>{formatInvoiceCurrency(invoice.taxAmount)}</span>
               </div>
             </div>
             <div className="border-current border-y-2 py-3">
               <div className="flex justify-between gap-8">
                 <span className="font-semibold uppercase">Balance due</span>
-                <span className="font-semibold">{formatInvoiceCurrency(getInvoiceTotal(invoice))}</span>
+                <span className="font-semibold">{formatInvoiceCurrency(invoice.balanceDue)}</span>
               </div>
             </div>
           </section>
@@ -119,13 +107,13 @@ export function InvoicePaper({ invoice }: { invoice: InvoiceFormValues }) {
 
       <footer className="absolute right-12.25 bottom-11 left-12.25 grid grid-cols-2 gap-14 text-neutral-500 text-sm leading-relaxed">
         <div>
-          <p>{invoice.from.email}</p>
-          <p>{invoice.from.phone}</p>
-          <p>{invoice.from.website}</p>
+          <p>{from.email}</p>
+          <p>{from.phone}</p>
+          <p>{from.website}</p>
         </div>
         <div>
           <p>Prepared for prompt processing.</p>
-          <p>Issued by {invoice.from.issuerName}</p>
+          <p>Issued by {issuedBy}</p>
         </div>
       </footer>
     </article>

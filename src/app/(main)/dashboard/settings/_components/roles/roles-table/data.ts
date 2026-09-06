@@ -1,3 +1,5 @@
+import type { RoleSummary } from "@/server/queries/staff";
+
 export type Role = {
   role: string;
   group: string;
@@ -101,3 +103,27 @@ export const roles: Role[] = [
     status: "Active",
   },
 ];
+
+/**
+ * Adapt a live role summary to the shape this table renders. Group has no
+ * column behind it, so it comes back empty and the panel keeps that column
+ * hidden; owner and last review are nullable in the database.
+ */
+export function roleSummaryToRole(summary: RoleSummary): Role {
+  return {
+    role: summary.name,
+    group: "",
+    accessLevel: summary.accessLevel,
+    users: summary.staffCount,
+    permissionSets: summary.permissionSetNames,
+    lastReview: summary.lastReviewedOn
+      ? new Date(summary.lastReviewedOn).toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        })
+      : "—",
+    owner: summary.ownerName ?? "—",
+    status: summary.status === "Needs review" ? "Needs review" : "Active",
+  };
+}

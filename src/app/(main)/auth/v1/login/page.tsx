@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { Command } from "lucide-react";
 
 import { LoginForm } from "../../_components/login-form";
@@ -25,8 +27,11 @@ export default function LoginV1() {
           </div>
           <div className="space-y-4">
             <LoginForm />
-            <p className="text-center text-muted-foreground text-xs">
-              Accounts are created by an administrator. Ask yours if you need one.
+            <p className="text-center text-muted-foreground text-sm">
+              New here?{" "}
+              <Link href="/auth/v1/register" className="font-medium text-foreground underline-offset-4 hover:underline">
+                Create your company
+              </Link>
             </p>
           </div>
         </div>

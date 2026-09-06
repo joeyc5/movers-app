@@ -4,8 +4,9 @@ import { FolderPlus, Grid2X2, List, Upload } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { getDocumentFolders, getDocuments } from "@/server/queries/documents";
 
-import { type FileManagerView, files, folders } from "./_components/data";
+import type { FileManagerView } from "./_components/data";
 import { FileGridView } from "./_components/file-grid-view";
 import { FileListView } from "./_components/file-list-view";
 import { FileManagerToolbar } from "./_components/file-manager-toolbar";
@@ -16,7 +17,7 @@ interface PageProps {
 }
 
 export default async function Page({ searchParams }: PageProps) {
-  const { view } = await searchParams;
+  const [{ view }, files, folders] = await Promise.all([searchParams, getDocuments(), getDocumentFolders()]);
   const activeView: FileManagerView = view === "list" ? "list" : "grid";
 
   return (

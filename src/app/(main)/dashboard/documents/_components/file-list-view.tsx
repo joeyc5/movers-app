@@ -10,11 +10,11 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 
-import { type FileManagerFile, fileIcons } from "./data";
+import { type DocumentItem, fileIcons, visibilityLabels } from "./data";
 import { FileActions } from "./file-actions";
 
 interface FileListViewProps {
-  files: FileManagerFile[];
+  files: DocumentItem[];
 }
 
 export function FileListView({ files }: FileListViewProps) {
@@ -49,11 +49,9 @@ export function FileListView({ files }: FileListViewProps) {
                   <Button variant="link" size="sm" className="h-auto max-w-72 justify-start px-0">
                     <span className="truncate">{file.name}</span>
                   </Button>
-                  {file.shared && (
-                    <Badge variant="outline" className="hidden xl:inline-flex">
-                      Shared
-                    </Badge>
-                  )}
+                  <Badge variant="outline" className="hidden xl:inline-flex">
+                    {visibilityLabels[file.visibility]}
+                  </Badge>
                 </div>
               </TableCell>
               <TableCell className="hidden md:table-cell">
@@ -61,11 +59,10 @@ export function FileListView({ files }: FileListViewProps) {
                   <Avatar size="sm">
                     <AvatarFallback>{file.ownerInitials}</AvatarFallback>
                   </Avatar>
-                  <span>{file.owner}</span>
+                  <span>{file.ownerName}</span>
                 </div>
               </TableCell>
               <TableCell className="hidden text-muted-foreground lg:table-cell">{file.modifiedAt}</TableCell>
-              <TableCell className="hidden text-muted-foreground sm:table-cell">{file.size}</TableCell>
               <TableCell>
                 <div className="flex items-center justify-end">
                   <Button

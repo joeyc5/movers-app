@@ -47,3 +47,11 @@ supabase/migrations/parts/
 
 # stray CLI state written when the shell cwd was inside migrations/
 supabase/**/.temp/
+
+# design-sync: staged converter scripts, generated bundle, machine state
+.ds-sync/
+ds-bundle/
+.design-sync/.cache/
+.design-sync/learnings/
+.design-sync/node_modules
+dist/

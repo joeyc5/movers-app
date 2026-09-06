@@ -40,7 +40,10 @@
       "!dist",
       "!out",
       "!src/components/ui",
-      "!src/components/calendar"
+      "!src/components/calendar",
+      "!.design-sync",
+      "!.ds-sync",
+      "!ds-bundle"
     ]
   },
   "formatter": {

@@ -12,10 +12,17 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useIsMobile } from "@/hooks/use-mobile";
 import { dataTableFeatures } from "@/lib/data-table-features";
 
-import { type StorageCustomer, storageCustomerFilters } from "./data";
+import { locationFilterOptions, type StorageCustomer, storageCustomerFilters } from "./data";
 import { storageCustomersColumns } from "./storage-customers-columns";
 
-export function StorageCustomersPanel({ storageCustomers }: { storageCustomers: StorageCustomer[] }) {
+export function StorageCustomersPanel({
+  storageCustomers,
+  locations,
+}: {
+  storageCustomers: StorageCustomer[];
+  locations: string[];
+}) {
+  const locationOptions = React.useMemo(() => locationFilterOptions(locations), [locations]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = React.useState<ColumnVisibilityState>({
     search: false,
@@ -52,8 +59,7 @@ export function StorageCustomersPanel({ storageCustomers }: { storageCustomers: 
   const statusFilter =
     (table.getColumn("status")?.getFilterValue() as string | undefined) ?? storageCustomerFilters.status[0];
   const locationFilter =
-    (table.getColumn("warehouseLocation")?.getFilterValue() as string | undefined) ??
-    storageCustomerFilters.location[0];
+    (table.getColumn("warehouseLocation")?.getFilterValue() as string | undefined) ?? locationOptions[0];
 
   function setColumnSelectFilter(columnId: string, value: string) {
     table.getColumn(columnId)?.setFilterValue(value === "All" ? undefined : value);
@@ -110,7 +116,7 @@ export function StorageCustomersPanel({ storageCustomers }: { storageCustomers: 
             </SelectTrigger>
             <SelectContent position="popper" align="start">
               <SelectGroup>
-                {storageCustomerFilters.location.map((option) => (
+                {locationOptions.map((option) => (
                   <SelectItem key={option} value={option}>
                     {option}
                   </SelectItem>

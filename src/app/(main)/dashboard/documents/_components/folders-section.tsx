@@ -1,4 +1,4 @@
-import { Clock, Folder, MoreVertical } from "lucide-react";
+import { Folder, MoreVertical } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,10 +11,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 
-import type { FileManagerFolder } from "./data";
+import type { DocumentFolderCard } from "./data";
 
 interface FoldersSectionProps {
-  folders: FileManagerFolder[];
+  folders: DocumentFolderCard[];
 }
 
 export function FoldersSection({ folders }: FoldersSectionProps) {
@@ -55,12 +55,8 @@ export function FoldersSection({ folders }: FoldersSectionProps) {
                   </DropdownMenu>
                 </CardAction>
               </CardHeader>
-              <CardContent className="flex items-center justify-between gap-3 text-muted-foreground text-xs">
-                <div className="flex items-center gap-1.5">
-                  <Clock className="size-3.5" />
-                  <span>Updated {folder.updatedAt}</span>
-                </div>
-                <span>{folder.size}</span>
+              <CardContent className="text-muted-foreground text-xs">
+                {folder.fileCount} {folder.fileCount === 1 ? "file" : "files"}
               </CardContent>
             </Card>
           ))}

@@ -18,18 +18,37 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectVa
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { dataTableFeatures } from "@/lib/data-table-features";
+import type { StaffMember } from "@/server/queries/staff";
 
-import { filters, type UserRow } from "./data";
+import { filters, staffToUserRow } from "./data";
+import { InviteUserSheet } from "./invite-user-sheet";
 import { usersColumns } from "./users-columns";
 import { UsersTable } from "./users-table";
 
-export function UsersPanel({ users }: { users: UserRow[] }) {
+export function UsersPanel({
+  staff,
+  roleOptions,
+  canManageUsers,
+  currentStaffId,
+}: {
+  staff: StaffMember[];
+  roleOptions: { slug: string; name: string }[];
+  canManageUsers: boolean;
+  currentStaffId: string | null;
+}) {
+  const users = React.useMemo(() => staff.map(staffToUserRow), [staff]);
+  const columns = React.useMemo(
+    () => usersColumns({ roleOptions, canManageUsers, currentStaffId }),
+    [roleOptions, canManageUsers, currentStaffId],
+  );
   const [rowSelection, setRowSelection] = React.useState({});
   const [sorting, setSorting] = React.useState<SortingState>([{ id: "joinedDate", desc: true }]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = React.useState<ColumnVisibilityState>({
     search: false,
     team: false,
+    // No column behind it in the live schema.
+    location: false,
   });
   const [pagination, setPagination] = React.useState<PaginationState>({
     pageIndex: 0,
@@ -54,7 +73,7 @@ export function UsersPanel({ users }: { users: UserRow[] }) {
   const table = useTable({
     features: dataTableFeatures,
     data: users,
-    columns: usersColumns,
+    columns,
     state: {
       rowSelection,
       sorting,
@@ -116,9 +135,16 @@ export function UsersPanel({ users }: { users: UserRow[] }) {
           <Button variant="outline" size="sm">
             <Download /> Export
           </Button>
-          <Button size="sm">
-            <Plus /> Add User
-          </Button>
+          {canManageUsers ? (
+            <InviteUserSheet
+              roleOptions={roleOptions}
+              trigger={
+                <Button size="sm">
+                  <Plus /> Add User
+                </Button>
+              }
+            />
+          ) : null}
         </CardAction>
       </CardHeader>
       <CardContent className="flex flex-col gap-4 px-0">

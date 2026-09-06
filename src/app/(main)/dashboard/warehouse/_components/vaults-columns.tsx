@@ -15,7 +15,7 @@ import {
 import type { DataTableFeatures } from "@/lib/data-table-features";
 import { cn } from "@/lib/utils";
 
-import { getVaultOccupancyPercent, storageCustomers, type Vault, vaultStatusMeta } from "./data";
+import { getVaultOccupancyPercent, type Vault, vaultStatusMeta } from "./data";
 
 function StatusBadge({ status }: { status: Vault["status"] }) {
   const meta = vaultStatusMeta[status];
@@ -65,16 +65,14 @@ function OccupancyMeter({ vault }: { vault: Vault }) {
   );
 }
 
-function getCustomerName(assignedCustomerId?: string) {
-  if (!assignedCustomerId) return undefined;
-  return storageCustomers.find((customer) => customer.id === assignedCustomerId)?.customerName;
+function getCustomerName(vault: Vault) {
+  return vault.customerName ?? undefined;
 }
 
 export const vaultsColumns: ColumnDef<DataTableFeatures, Vault>[] = [
   {
     id: "search",
-    accessorFn: (row) =>
-      `${row.id} ${row.warehouseLocation} ${row.rack} ${getCustomerName(row.assignedCustomerId) ?? ""}`,
+    accessorFn: (row) => `${row.id} ${row.warehouseLocation} ${row.rack} ${getCustomerName(row) ?? ""}`,
     filterFn: "includesString",
     enableHiding: true,
   },
@@ -99,7 +97,7 @@ export const vaultsColumns: ColumnDef<DataTableFeatures, Vault>[] = [
     id: "customer",
     header: "Customer",
     cell: ({ row }) => {
-      const name = getCustomerName(row.original.assignedCustomerId);
+      const name = getCustomerName(row.original);
       return name ? (
         <div className="max-w-20 truncate text-sm sm:max-w-none">{name}</div>
       ) : (

@@ -20,7 +20,7 @@
  * THE PASSWORD. Read from SVM_OWNER_PASSWORD, never defaulted, never
  * hardcoded, never written anywhere durable. This script does not know
  * or choose the password; whoever runs it supplies it in the shell for
- * that one invocation. See docs/HANDOFF.md for the note on rotating it
+ * that one invocation. See docs/TENANCY.md for the note on rotating it
  * after first sign-in.
  *
  *   SVM_OWNER_PASSWORD='...' SUPABASE_SECRET_KEY=... SUPABASE_DB_URL=... \

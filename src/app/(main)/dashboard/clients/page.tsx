@@ -1,9 +1,9 @@
-import { getClients } from "@/server/queries/clients";
+import { canWriteClients, getAccountOwnerOptions, getClients } from "@/server/queries/clients";
 
 import { ClientsPanel } from "./_components/clients-panel";
 
 export default async function Page() {
-  const clients = await getClients();
+  const [clients, owners, canWrite] = await Promise.all([getClients(), getAccountOwnerOptions(), canWriteClients()]);
 
   return (
     <div className="flex flex-col gap-4">
@@ -12,7 +12,7 @@ export default async function Page() {
         <p className="text-muted-foreground text-sm">Look up a household or business account and its history.</p>
       </div>
 
-      <ClientsPanel clients={clients} />
+      <ClientsPanel clients={clients} owners={owners} canWrite={canWrite} />
     </div>
   );
 }

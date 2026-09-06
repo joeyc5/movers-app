@@ -1,26 +1,17 @@
 import { addDays, format } from "date-fns";
 
+import type { InvoiceDiscountType, InvoiceStatus, InvoiceView } from "@/server/queries/invoices";
+
+export type { InvoiceDiscountType } from "@/server/queries/invoices";
+
 import type { Client } from "../../../_components/data";
 
-export interface InvoiceLineItem {
-  id: string;
-  description: string;
-  quantity: number;
-  unitPrice: number;
-}
-
-export interface InvoiceTaxOption {
-  id: string;
-  name: string;
-  rate: number;
-}
-
-export type InvoiceDiscountType = "fixed" | "percent";
-
+/** The scaled paper preview geometry, shared by the preview and print views. */
 export const INVOICE_PAPER_WIDTH = 816;
 export const INVOICE_PAPER_HEIGHT = 1056;
 export const INVOICE_PAPER_SCALE = 0.6;
 
+/** The company block printed at the top of every invoice. */
 export interface InvoiceFromDetails {
   name: string;
   email: string;
@@ -32,28 +23,6 @@ export interface InvoiceFromDetails {
   routingNumber: string;
   issuerName: string;
 }
-
-export interface InvoiceToDetails {
-  id: string;
-  name: string;
-  email: string;
-  addressLines: string[];
-  taxId?: string;
-}
-
-export interface InvoiceFormValues {
-  referenceNumber: string;
-  issuedDate: string;
-  paymentDueDate: string;
-  from: InvoiceFromDetails;
-  to: InvoiceToDetails;
-  taxId: string;
-  discountType: InvoiceDiscountType;
-  discountValue: number;
-  items: InvoiceLineItem[];
-}
-
-const today = new Date();
 
 /** Shape of the columns read from public.company_billing_profile. */
 export interface CompanyBillingProfile {
@@ -103,6 +72,68 @@ export function companyBillingProfileToInvoiceFrom(
     routingNumber: profile.routing_number,
     issuerName,
   };
+}
+
+export const invoiceStatusMeta: Record<InvoiceStatus, { label: string; badgeClass: string; dotClass: string }> = {
+  Draft: {
+    label: "Draft",
+    badgeClass: "border-border bg-muted/50 text-muted-foreground",
+    dotClass: "bg-muted-foreground",
+  },
+  Sent: {
+    label: "Sent",
+    badgeClass: "border-sky-500/20 bg-sky-500/10 text-sky-600 dark:text-sky-400",
+    dotClass: "bg-sky-500",
+  },
+  Paid: {
+    label: "Paid",
+    badgeClass: "border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+    dotClass: "bg-emerald-500",
+  },
+  Void: {
+    label: "Void",
+    badgeClass: "border-orange-500/20 bg-orange-500/10 text-orange-600 dark:text-orange-400",
+    dotClass: "bg-orange-500",
+  },
+};
+
+/* The invoice form model and its money math. Restored from the
+ * pre-multi-tenancy module: the live-data pass replaced the persisted
+ * invoice shape here but left the draft-form components importing these. */
+
+const today = new Date();
+
+export interface InvoiceLineItem {
+  id: string;
+  description: string;
+  quantity: number;
+  unitPrice: number;
+}
+
+export interface InvoiceTaxOption {
+  id: string;
+  name: string;
+  rate: number;
+}
+
+export interface InvoiceToDetails {
+  id: string;
+  name: string;
+  email: string;
+  addressLines: string[];
+  taxId?: string;
+}
+
+export interface InvoiceFormValues {
+  referenceNumber: string;
+  issuedDate: string;
+  paymentDueDate: string;
+  from: InvoiceFromDetails;
+  to: InvoiceToDetails;
+  taxId: string;
+  discountType: InvoiceDiscountType;
+  discountValue: number;
+  items: InvoiceLineItem[];
 }
 
 export function clientToInvoiceDetails(client: Client): InvoiceToDetails {
@@ -180,4 +211,56 @@ export function getInvoiceDiscount(invoice: InvoiceFormValues) {
 
 export function getInvoiceTotal(invoice: InvoiceFormValues) {
   return Math.max(getInvoiceSubtotal(invoice) - getInvoiceDiscount(invoice), 0) + getInvoiceTax(invoice);
+}
+
+/**
+ * Render a not-yet-saved invoice through the same paper component the saved
+ * one uses. The draft carries only what the form collects; everything else is
+ * either computed by the money helpers above or genuinely absent until the
+ * invoice is persisted.
+ */
+export function draftInvoiceToView(invoice: InvoiceFormValues): InvoiceView {
+  const [addressLine1 = null, addressLine2 = null] = invoice.to.addressLines;
+  const subtotal = getInvoiceSubtotal(invoice);
+  const discountAmount = getInvoiceDiscount(invoice);
+  const taxOption = getInvoiceTaxOption(invoice);
+  const taxAmount = getInvoiceTax(invoice);
+
+  return {
+    id: "",
+    code: invoice.referenceNumber,
+    clientId: invoice.to.id,
+    dealId: null,
+    quoteId: null,
+    status: "Draft",
+    issuedDate: invoice.issuedDate,
+    paymentDueDate: invoice.paymentDueDate,
+    billToName: invoice.to.name,
+    billToEmail: invoice.to.email || null,
+    billToAddressLine1: addressLine1,
+    billToAddressLine2: addressLine2,
+    customerTaxId: invoice.to.taxId ?? null,
+    taxRateId: taxOption.id,
+    taxRatePercent: taxOption.rate,
+    discountType: invoice.discountType,
+    discountValue: invoice.discountValue,
+    subtotal,
+    discountAmount,
+    taxAmount,
+    totalAmount: getInvoiceTotal(invoice),
+    amountPaid: 0,
+    balanceDue: getInvoiceTotal(invoice),
+    notes: null,
+    issuedByName: null,
+    createdAt: new Date().toISOString(),
+    lineItems: invoice.items.map((item, position) => ({
+      id: item.id,
+      description: item.description,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+      taxable: true,
+      amount: getLineAmount(item),
+      position,
+    })),
+  };
 }

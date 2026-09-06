@@ -33,7 +33,7 @@ function StatusBadge({ status }: { status: StorageCustomer["status"] }) {
 export const storageCustomersColumns: ColumnDef<DataTableFeatures, StorageCustomer>[] = [
   {
     id: "search",
-    accessorFn: (row) => `${row.customerName} ${row.id} ${row.clientId} ${row.vaultIds.join(" ")}`,
+    accessorFn: (row) => `${row.customerName} ${row.id} ${row.clientCode} ${row.vaultIds.join(" ")}`,
     filterFn: "includesString",
     enableHiding: true,
   },
@@ -44,7 +44,7 @@ export const storageCustomersColumns: ColumnDef<DataTableFeatures, StorageCustom
       <div className="min-w-0 max-w-36 sm:max-w-none">
         <Link
           className="block truncate font-medium text-foreground text-sm hover:underline"
-          href={`/dashboard/clients/${row.original.clientId}`}
+          href={`/dashboard/clients/${row.original.clientCode}`}
         >
           {row.original.customerName}
         </Link>
@@ -96,7 +96,7 @@ export const storageCustomersColumns: ColumnDef<DataTableFeatures, StorageCustom
     header: "Next Billing",
     cell: ({ row }) => (
       <div className="text-sm">
-        {row.original.nextBillingDate === "—" ? "—" : format(new Date(row.original.nextBillingDate), "MMM d, yyyy")}
+        {row.original.nextBillingDate ? format(new Date(row.original.nextBillingDate), "MMM d, yyyy") : "—"}
       </div>
     ),
   },
@@ -118,7 +118,7 @@ export const storageCustomersColumns: ColumnDef<DataTableFeatures, StorageCustom
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem asChild>
-              <Link href={`/dashboard/clients/${row.original.clientId}`}>View client</Link>
+              <Link href={`/dashboard/clients/${row.original.clientCode}`}>View client</Link>
             </DropdownMenuItem>
             <DropdownMenuItem>Record payment</DropdownMenuItem>
             <DropdownMenuItem>Schedule move-out</DropdownMenuItem>

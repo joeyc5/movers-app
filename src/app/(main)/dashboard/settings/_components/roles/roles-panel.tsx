@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import {
   type ColumnFiltersState,
@@ -16,9 +16,10 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectVa
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { dataTableFeatures } from "@/lib/data-table-features";
+import type { RoleSummary } from "@/server/queries/staff";
 
 import { rolesColumns } from "./roles-table/columns";
-import type { Role } from "./roles-table/data";
+import { roleSummaryToRole } from "./roles-table/data";
 import { RolesTable } from "./roles-table/table";
 
 function getRoleTypeFilter(groupFilter: string) {
@@ -45,7 +46,8 @@ function getRoleGroupFilterValue(typeFilter: string) {
   return undefined;
 }
 
-export function RolesPanel({ roles }: { roles: Role[] }) {
+export function RolesPanel({ roles: roleSummaries }: { roles: RoleSummary[] }) {
+  const roles = useMemo(() => roleSummaries.map(roleSummaryToRole), [roleSummaries]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<ColumnVisibilityState>({
     group: false,

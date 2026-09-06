@@ -3,16 +3,20 @@ import Link from "next/link";
 import { ClipboardList, Truck } from "lucide-react";
 
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { getDispatchEvents, getOfficeEvents } from "@/server/queries/calendar";
 
 import { EventCalendar } from "./_components/calendar";
-import { dispatchEvents, officeEvents } from "./_components/events-data";
 
 interface PageProps {
   searchParams: Promise<{ view?: string | string[] }>;
 }
 
 export default async function Page({ searchParams }: PageProps) {
-  const { view } = await searchParams;
+  const [{ view }, dispatchEvents, officeEvents] = await Promise.all([
+    searchParams,
+    getDispatchEvents(),
+    getOfficeEvents(),
+  ]);
   const activeView = view === "office" ? "office" : "dispatch";
 
   return (
