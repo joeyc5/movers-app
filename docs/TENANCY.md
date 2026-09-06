@@ -129,20 +129,25 @@ than a false pass because no invoice data exists yet.
 
 ## Open items
 
-- **D21 needs a product decision, not a patch.** `company_billing_profile`
-  grants column-level `SELECT` on `payment_account_name` and `routing_number`
-  to `authenticated`, and its select policy is `app.is_active_staff()`, so any
-  active staff member in the tenant can read them. Writes are already gated on
-  `has_perm('settings')`; only reads are broad.
+- **D21, decided 2026-09-05: accepted, do not reopen.**
+  `company_billing_profile` grants column-level `SELECT` on
+  `payment_account_name` and `routing_number` to `authenticated`, and its
+  select policy is `app.is_active_staff()`, so any active staff member in the
+  tenant can read them. Writes are already gated on `has_perm('settings')`,
+  and cross-tenant reads are already impossible.
 
-  The obvious fix, revoking those two columns from `authenticated`, breaks
-  invoicing: `invoice-paper.tsx:37` prints `Routing no.` on every invoice, so
-  anyone who can render an invoice needs the value. There is no account-number
-  column, and a routing number appears on every cheque the company writes, so
-  the exposure is narrower than the original note implied. Deciding between
-  leaving it, moving the render behind a SECURITY DEFINER call, or splitting
-  the columns into a narrower-grant table is a call about who may see the
-  remittance block, not a defect with one correct fix.
+  Accepted because the data is not secret from the people who can read it.
+  There is no account-number column, and `invoice-paper.tsx:37` prints
+  `Routing no.` on every invoice the company sends. Each alternative costs
+  more than it buys: revoking the column breaks invoice rendering for anyone
+  without settings permission, a SECURITY DEFINER wrapper hands the same
+  values to the same callers with more machinery, and splitting the columns
+  into their own table means a migration and a join against live tenant data
+  for an identical effective read set.
+
+  Revisit only if an account-number column is ever added, which would change
+  the calculation entirely.
+
 - **Leaked-password protection is disabled.** Enable it in Auth settings
   before the app carries anything real.
 - **No document bytes exist.** `npm run seed:documents` has never run; it
