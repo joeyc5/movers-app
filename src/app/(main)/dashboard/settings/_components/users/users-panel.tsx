@@ -29,12 +29,18 @@ export function UsersPanel({
   staff,
   roleOptions,
   canManageUsers,
+  currentStaffId,
 }: {
   staff: StaffMember[];
   roleOptions: { slug: string; name: string }[];
   canManageUsers: boolean;
+  currentStaffId: string | null;
 }) {
   const users = React.useMemo(() => staff.map(staffToUserRow), [staff]);
+  const columns = React.useMemo(
+    () => usersColumns({ roleOptions, canManageUsers, currentStaffId }),
+    [roleOptions, canManageUsers, currentStaffId],
+  );
   const [rowSelection, setRowSelection] = React.useState({});
   const [sorting, setSorting] = React.useState<SortingState>([{ id: "joinedDate", desc: true }]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
@@ -67,7 +73,7 @@ export function UsersPanel({
   const table = useTable({
     features: dataTableFeatures,
     data: users,
-    columns: usersColumns,
+    columns,
     state: {
       rowSelection,
       sorting,

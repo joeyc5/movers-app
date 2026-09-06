@@ -57,7 +57,7 @@ export function InviteUserSheet({
   function onSubmit(values: FormValues) {
     startTransition(async () => {
       const result = await inviteStaff(values);
-      if (result?.error) {
+      if (result.error) {
         toast.error(result.error);
         return;
       }

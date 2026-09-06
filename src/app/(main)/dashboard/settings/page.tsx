@@ -54,7 +54,12 @@ export default async function Page() {
         </TabsContent>
 
         <TabsContent className="pt-4" value="users">
-          <UsersPanel staff={staff} roleOptions={roleOptions} canManageUsers={canManageUsers} />
+          <UsersPanel
+            staff={staff}
+            roleOptions={roleOptions}
+            canManageUsers={canManageUsers}
+            currentStaffId={access?.staffId ?? null}
+          />
         </TabsContent>
 
         <TabsContent className="pt-4" value="roles">

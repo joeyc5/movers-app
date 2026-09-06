@@ -2,23 +2,16 @@
 import type { ColumnDef } from "@tanstack/react-table";
 import { Subscribe } from "@tanstack/react-table";
 import { parse } from "date-fns";
-import { Check, Clock, MoreHorizontal, X } from "lucide-react";
+import { Check, Clock, X } from "lucide-react";
 
 import { Avatar, AvatarBadge, AvatarFallback, AvatarGroup, AvatarGroupCount } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import type { DataTableFeatures } from "@/lib/data-table-features";
 import { cn, getInitials } from "@/lib/utils";
 
 import { statusMeta, type UserRow } from "./data";
+import { UserActions, type UserActionsContext } from "./user-actions";
 
 function RoleCell({ role, team }: { role: string; team: string }) {
   return (
@@ -115,7 +108,10 @@ function LocationCell({ locations }: { locations: string[] }) {
   );
 }
 
-export const usersColumns: ColumnDef<DataTableFeatures, UserRow>[] = [
+// A factory, not a constant: the row actions need the role list, the write
+// capability, and the caller's own staff id, none of which a module-level
+// column array can see.
+export const usersColumns = (ctx: UserActionsContext): ColumnDef<DataTableFeatures, UserRow>[] => [
   {
     id: "select",
     header: ({ table }) => (
@@ -208,26 +204,7 @@ export const usersColumns: ColumnDef<DataTableFeatures, UserRow>[] = [
     header: () => <div className="text-right">Actions</div>,
     cell: ({ row }) => (
       <div className="text-right">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              aria-label={`Open actions for ${row.original.name}`}
-              className="size-8 rounded-md text-muted-foreground hover:bg-muted/50"
-              size="icon-sm"
-              variant="ghost"
-            >
-              <MoreHorizontal className="size-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem>View profile</DropdownMenuItem>
-            <DropdownMenuItem>Edit user</DropdownMenuItem>
-            <DropdownMenuItem>Manage team</DropdownMenuItem>
-            <DropdownMenuItem>Resend invite</DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem variant="destructive">Deactivate user</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <UserActions user={row.original} ctx={ctx} />
       </div>
     ),
     enableSorting: false,

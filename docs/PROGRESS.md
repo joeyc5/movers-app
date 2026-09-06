@@ -29,7 +29,10 @@ created. Generated from `pg_constraint`, applied, verified 0 of 48 missing.
 
 Moved Calendar onto `getDispatchEvents` and `getOfficeEvents` and deleted its
 fixture module, so no screen reads static arrays now. Wired the Settings Add
-User button to a new invite sheet over the existing `inviteStaff` action.
+User button to a new invite sheet over the existing `inviteStaff` action. The
+users table's five inert row actions became three that work: Edit user over
+`updateStaff`, a Change role submenu over `setStaffRole`, and a
+Deactivate/Reactivate toggle over `setStaffStatus`.
 
 ## 2026-09-02 — Working pages
 
