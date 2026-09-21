@@ -15,7 +15,7 @@ export const THEME_PRESET_OPTIONS = [
     label: "Default",
     value: "default",
     primary: {
-      light: "oklch(0.205 0 0)",
+      light: "oklch(0.59 0.18 259)",
       dark: "oklch(0.922 0 0)",
     },
   },
@@ -31,7 +31,7 @@ export const THEME_PRESET_OPTIONS = [
     label: "Soft Pop",
     value: "soft-pop",
     primary: {
-      light: "oklch(0.5106 0.2301 276.9656)",
+      light: "oklch(0.59 0.18 259)",
       dark: "oklch(0.6801 0.1583 276.9349)",
     },
   },
@@ -39,8 +39,8 @@ export const THEME_PRESET_OPTIONS = [
     label: "Tangerine",
     value: "tangerine",
     primary: {
-      light: "oklch(0.64 0.17 36.44)",
-      dark: "oklch(0.64 0.17 36.44)",
+      light: "oklch(0.59 0.18 259)",
+      dark: "oklch(0.59 0.18 259)",
     },
   },
 ] as const;

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Truck } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
 
+import { Collapsible05 } from "@/components/ui/collapsible-05";
 import {
   Sidebar,
   SidebarContent,
@@ -18,7 +19,6 @@ import { APP_CONFIG } from "@/config/app-config";
 import { sidebarItems } from "@/navigation/sidebar/sidebar-items";
 import { usePreferencesStore } from "@/stores/preferences/preferences-provider";
 
-import { NavMain } from "./nav-main";
 import { NavUser } from "./nav-user";
 
 export function AppSidebar({
@@ -60,7 +60,7 @@ export function AppSidebar({
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={sidebarItems} />
+        <Collapsible05 groups={sidebarItems} />
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={user} />
